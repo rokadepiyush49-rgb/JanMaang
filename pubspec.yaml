@@ -79,6 +79,7 @@ flutter:
 
   assets:
     - assets/brand/
+    - assets/gallery/
 
   fonts:
     # Variable fonts from the Stitch design system: DM Sans for display and
