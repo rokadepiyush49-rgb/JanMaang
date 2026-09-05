@@ -111,10 +111,10 @@ class _FieldVerificationScreenState
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: <Widget>[
-              JmStatusChip(
+              const JmStatusChip(
                 label: 'ASSIGNED',
-                background: scheme.secondaryFixed,
-                foreground: scheme.onSecondaryFixed,
+                tone: JmTone.info,
+                icon: Icons.assignment_outlined,
                 dense: true,
               ),
               const SizedBox(height: Insets.sm),

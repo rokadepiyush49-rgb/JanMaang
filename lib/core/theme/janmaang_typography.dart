@@ -93,6 +93,29 @@ abstract final class JanMaangTypography {
     fontVariations: <FontVariation>[FontVariation('wght', 600)],
   );
 
+  /// The navigation bar label. A step below labelMd so five destinations fit
+  /// across a small phone without truncating, with the letter-spacing kept so
+  /// it still reads as a label rather than shrunken body copy.
+  static const navLabel = TextStyle(
+    fontFamily: bodyFamily,
+    fontSize: 11,
+    height: 14 / 11,
+    fontWeight: FontWeight.w600,
+    letterSpacing: 0.2,
+    fontVariations: <FontVariation>[FontVariation('wght', 600)],
+  );
+
+  /// Timestamps, source attributions, provenance lines, helper text under a
+  /// field. The smallest type in the product — never used for anything a
+  /// citizen has to act on.
+  static const caption = TextStyle(
+    fontFamily: bodyFamily,
+    fontSize: 12,
+    height: 16 / 12,
+    fontWeight: FontWeight.w400,
+    fontVariations: <FontVariation>[FontVariation('wght', 400)],
+  );
+
   /// Numerals in tables, budgets and metrics. The design system requires
   /// tabular figures so columns of numbers align across rows.
   static const tabularNums = TextStyle(
@@ -137,6 +160,6 @@ abstract final class JanMaangTypography {
         bodySmall: bodySm.copyWith(color: onSurfaceVariant),
         labelLarge: labelMd.copyWith(color: onSurface),
         labelMedium: labelMd.copyWith(color: onSurfaceVariant),
-        labelSmall: labelMd.copyWith(color: onSurfaceVariant),
+        labelSmall: navLabel.copyWith(color: onSurfaceVariant),
       );
 }

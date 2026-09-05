@@ -17,6 +17,7 @@ import '../../features/method/presentation/method_screen.dart';
 import '../../features/onboarding/presentation/onboarding_screen.dart';
 import '../../features/profile/presentation/profile_screen.dart';
 import '../../features/report/presentation/report_screen.dart';
+import '../../features/splash/presentation/splash_screen.dart';
 import '../../features/verification/presentation/field_verification_screen.dart';
 import '../../features/verification/presentation/verify_screen.dart';
 import '../../shared/models/demand_enums.dart';
@@ -51,7 +52,7 @@ final routerProvider = Provider<GoRouter>((ref) {
 
   return GoRouter(
     navigatorKey: _rootKey,
-    initialLocation: AppRoute.home.path,
+    initialLocation: AppRoute.splash.path,
     debugLogDiagnostics: false,
     refreshListenable: authListenable,
     redirect: (context, state) {
@@ -60,8 +61,23 @@ final routerProvider = Provider<GoRouter>((ref) {
       // Hold the current location until the auth stream produces its first value.
       if (auth.isLoading) return null;
 
-      final signedIn = auth.value != null;
       final location = state.matchedLocation;
+
+      // The splash screen is exempt from the guard in both directions: it runs
+      // its own timeline and then decides where to go. Redirecting off it would
+      // mean nobody ever sees it.
+      if (location == AppRoute.splash.path) return null;
+
+      // First resolution of the session goes through the splash whatever was
+      // asked for — otherwise a deep link, a bookmark or a hot restart on
+      // `#/onboarding` skips the whole opening sequence. The destination is
+      // remembered and restored the moment the timeline finishes.
+      if (!SplashGate.completed) {
+        SplashGate.remember(state.uri.toString());
+        return AppRoute.splash.path;
+      }
+
+      final signedIn = auth.value != null;
       final onAuthRoute = location == AppRoute.login.path ||
           location == AppRoute.otp.path ||
           location == AppRoute.onboarding.path;
@@ -71,6 +87,11 @@ final routerProvider = Provider<GoRouter>((ref) {
       return null;
     },
     routes: <RouteBase>[
+      GoRoute(
+        path: AppRoute.splash.path,
+        name: AppRoute.splash.name,
+        builder: (context, state) => const SplashScreen(),
+      ),
       GoRoute(
         path: AppRoute.onboarding.path,
         name: AppRoute.onboarding.name,

@@ -203,7 +203,7 @@ class _IssueList extends ConsumerWidget {
               Insets.marginMobile,
               0,
               Insets.marginMobile,
-              Insets.xl * 2,
+              Insets.navClearance,
             ),
             children: <Widget>[
               mine.maybeWhen(

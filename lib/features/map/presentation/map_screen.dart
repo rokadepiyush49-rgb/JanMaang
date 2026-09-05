@@ -173,7 +173,7 @@ class MapScreenState extends ConsumerState<MapScreen>
 
         Positioned(
           right: Insets.md,
-          bottom: selected == null ? Insets.xl + Insets.md : 0,
+          bottom: selected == null ? Insets.navClearance : Insets.sm,
           child: SafeArea(
             child: AnimatedSlide(
               offset: selected == null ? Offset.zero : const Offset(0, 2),
@@ -211,7 +211,7 @@ class MapScreenState extends ConsumerState<MapScreen>
         if (_legendOpen)
           Positioned(
             left: Insets.md,
-            bottom: Insets.xl + Insets.lg,
+            bottom: Insets.navClearance,
             child: SafeArea(
               child: JmEnter(child: const MapLegend()),
             ),

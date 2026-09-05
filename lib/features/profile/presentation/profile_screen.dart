@@ -67,10 +67,9 @@ class ProfileScreen extends ConsumerWidget {
                       ),
                       if (user?.aadhaarVerified ?? false) ...<Widget>[
                         const SizedBox(height: Insets.sm),
-                        JmStatusChip(
+                        const JmStatusChip(
                           label: 'HIGH TRUST',
-                          background: scheme.tertiaryFixed,
-                          foreground: scheme.onTertiaryFixed,
+                          tone: JmTone.success,
                           icon: Icons.verified_user,
                           dense: true,
                         ),

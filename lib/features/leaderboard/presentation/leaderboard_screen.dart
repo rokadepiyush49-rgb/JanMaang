@@ -62,7 +62,7 @@ class LeaderboardScreen extends ConsumerWidget {
                 Insets.marginMobile,
                 Insets.lg,
                 Insets.marginMobile,
-                Insets.xl * 2,
+                Insets.navClearance,
               ),
               children: <Widget>[
                 JmEnter(

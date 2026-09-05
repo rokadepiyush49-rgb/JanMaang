@@ -4,9 +4,13 @@ import '../../core/theme/app_spacing.dart';
 import '../../core/theme/janmaang_typography.dart';
 import 'jm_logo.dart';
 
-/// The flat top app bar from the designs: surface background, a 1px bottom
-/// hairline, no shadow. Either the JanMaang wordmark (tab screens) or a back
-/// arrow with a screen title (transactional screens).
+/// The top app bar.
+///
+/// Two forms: the JanMaang lockup with trailing actions on tab screens, or a
+/// back arrow with a screen title on transactional screens. Flat, no shadow —
+/// a single hairline is the only thing separating it from the page, and the
+/// trailing actions sit in soft circular wells so they read as controls rather
+/// than as loose glyphs floating beside the brand.
 class JmAppBar extends StatelessWidget implements PreferredSizeWidget {
   const JmAppBar({
     super.key,
@@ -41,8 +45,10 @@ class JmAppBar extends StatelessWidget implements PreferredSizeWidget {
   final VoidCallback? onNotifications;
   final VoidCallback? onProfile;
 
+  static const _height = 60.0;
+
   @override
-  Size get preferredSize => const Size.fromHeight(56);
+  Size get preferredSize => const Size.fromHeight(_height);
 
   @override
   Widget build(BuildContext context) {
@@ -51,20 +57,21 @@ class JmAppBar extends StatelessWidget implements PreferredSizeWidget {
     return DecoratedBox(
       decoration: BoxDecoration(
         color: scheme.surface,
-        border: Border(bottom: BorderSide(color: scheme.surfaceContainerHighest)),
+        border: Border(
+          bottom: BorderSide(color: scheme.outlineVariant.withValues(alpha: 0.7)),
+        ),
       ),
       child: SafeArea(
         bottom: false,
         child: SizedBox(
-          height: 56,
+          height: _height,
           child: Padding(
             padding: const EdgeInsets.symmetric(horizontal: Insets.sm),
             child: Row(
               children: <Widget>[
                 if (showBack)
-                  IconButton(
-                    icon: const Icon(Icons.arrow_back),
-                    color: scheme.onSurface,
+                  _BarButton(
+                    icon: Icons.arrow_back_rounded,
                     tooltip: 'Back',
                     onPressed: onBack ?? () => Navigator.of(context).maybePop(),
                   )
@@ -74,24 +81,29 @@ class JmAppBar extends StatelessWidget implements PreferredSizeWidget {
                   const JmBrandRow()
                 else if (title != null)
                   Expanded(
-                    child: Text(
-                      title!,
-                      overflow: TextOverflow.ellipsis,
-                      style: JanMaangTypography.titleLg
-                          .copyWith(color: scheme.onSurface),
+                    child: Padding(
+                      padding: const EdgeInsets.only(left: Insets.xs),
+                      child: Text(
+                        title!,
+                        overflow: TextOverflow.ellipsis,
+                        style: JanMaangTypography.titleLg
+                            .copyWith(color: scheme.onSurface),
+                      ),
                     ),
                   ),
                 const Spacer(),
                 if (actions != null)
                   ...actions!
                 else if (!showBack) ...<Widget>[
-                  _NotificationButton(
-                    hasUnread: hasUnreadNotifications,
+                  _BarButton(
+                    icon: Icons.notifications_none_rounded,
+                    tooltip: 'Notifications',
+                    badge: hasUnreadNotifications,
                     onPressed: onNotifications,
                   ),
-                  IconButton(
-                    icon: const Icon(Icons.account_circle_outlined),
-                    color: scheme.onSurfaceVariant,
+                  const SizedBox(width: Insets.xs),
+                  _BarButton(
+                    icon: Icons.person_outline_rounded,
                     tooltip: 'Profile',
                     onPressed: onProfile,
                   ),
@@ -105,38 +117,76 @@ class JmAppBar extends StatelessWidget implements PreferredSizeWidget {
   }
 }
 
-class _NotificationButton extends StatelessWidget {
-  const _NotificationButton({required this.hasUnread, this.onPressed});
+/// A 40px circular well with a 48px tap target around it, so the control meets
+/// the accessibility minimum without looking oversized next to the wordmark.
+class _BarButton extends StatelessWidget {
+  const _BarButton({
+    required this.icon,
+    required this.tooltip,
+    this.onPressed,
+    this.badge = false,
+  });
 
-  final bool hasUnread;
+  final IconData icon;
+  final String tooltip;
   final VoidCallback? onPressed;
+
+  /// Draws the unread pip, ringed in the surface colour so it stays visible
+  /// wherever it lands on the glyph.
+  final bool badge;
 
   @override
   Widget build(BuildContext context) {
     final scheme = Theme.of(context).colorScheme;
-    return Stack(
-      alignment: Alignment.center,
-      children: <Widget>[
-        IconButton(
-          icon: const Icon(Icons.notifications_outlined),
-          color: scheme.onSurfaceVariant,
-          tooltip: 'Notifications',
-          onPressed: onPressed,
-        ),
-        if (hasUnread)
-          Positioned(
-            top: 10,
-            right: 10,
-            child: Container(
-              width: 8,
-              height: 8,
-              decoration: BoxDecoration(
-                color: scheme.error,
-                shape: BoxShape.circle,
+
+    return Tooltip(
+      message: tooltip,
+      child: Semantics(
+        button: true,
+        label: badge ? '$tooltip, unread' : tooltip,
+        excludeSemantics: true,
+        child: SizedBox(
+          width: Hit.min,
+          height: Hit.min,
+          child: Center(
+            child: Material(
+              color: scheme.surfaceContainerLow,
+              shape: const CircleBorder(),
+              clipBehavior: Clip.antiAlias,
+              child: InkWell(
+                onTap: onPressed,
+                child: SizedBox(
+                  width: 40,
+                  height: 40,
+                  child: Stack(
+                    alignment: Alignment.center,
+                    children: <Widget>[
+                      Icon(icon, size: 21, color: scheme.onSurfaceVariant),
+                      if (badge)
+                        Positioned(
+                          top: 9,
+                          right: 10,
+                          child: Container(
+                            width: 9,
+                            height: 9,
+                            decoration: BoxDecoration(
+                              color: scheme.error,
+                              shape: BoxShape.circle,
+                              border: Border.all(
+                                color: scheme.surfaceContainerLow,
+                                width: 1.5,
+                              ),
+                            ),
+                          ),
+                        ),
+                    ],
+                  ),
+                ),
               ),
             ),
           ),
-      ],
+        ),
+      ),
     );
   }
 }
