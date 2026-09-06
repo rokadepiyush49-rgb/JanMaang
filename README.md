@@ -45,7 +45,7 @@ packages/
   contracts/       Generated API contract → TypeScript client + Dart models
   tokens/          Design tokens → CSS variables + Dart constants
   ui/              React primitives (web only)
-  config/          Shared lint/TS/Tailwind presets
+  config/          Shared lint/TS/Prettier presets
 infrastructure/    Docker, Terraform, Kubernetes, ops scripts
 docs/              Architecture, ADRs, API, database, AI, deployment, product
 scripts/           setup · doctor · contract generation
@@ -122,7 +122,7 @@ mapping and the full token table.
 | Layer | Choice | Notes |
 |---|---|---|
 | Citizen app | Flutter · Riverpod · go_router · flutter_map | Offline-first. See [apps/mobile](apps/mobile/README.md) |
-| Web platform | Next.js · TypeScript · React Query | One app, nine role route groups |
+| Web platform | Next.js 16 · React 19 · Tailwind v4 · TypeScript | One app, nine role route groups. See [apps/web](apps/web/README.md) |
 | API | FastAPI · SQLAlchemy · Alembic | Modular monolith; owns the schema |
 | Worker | ARQ | Same image as the API, different command |
 | AI | FastAPI · Gemini | One internal service, modular by capability |

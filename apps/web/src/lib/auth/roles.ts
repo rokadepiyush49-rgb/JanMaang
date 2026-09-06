@@ -53,3 +53,28 @@ export const SEGMENT_ROLES: Record<string, readonly Role[]> = {
 export function canEnter(segment: string, role: Role): boolean {
   return SEGMENT_ROLES[segment]?.includes(role) ?? false;
 }
+
+/** Human labels for the role badge and the account menu. */
+export const ROLE_LABEL: Record<Role, string> = {
+  citizen: "Citizen",
+  student: "Student",
+  faculty: "Faculty",
+  institute: "Institute",
+  panchayat: "Gram Panchayat",
+  department: "Department",
+  officer: "Officer",
+  industry: "Industry / CSR",
+  gov_admin: "Government Admin",
+  super_admin: "Super Admin",
+};
+
+/**
+ * Every segment this role may enter, in SEGMENT_ROLES order.
+ *
+ * Most roles get exactly one and the switcher stays hidden; the overlapping
+ * roles — institute across faculty, department across officer, super_admin
+ * across everything — are the reason it exists at all.
+ */
+export function segmentsFor(role: Role): string[] {
+  return Object.keys(SEGMENT_ROLES).filter((segment) => canEnter(segment, role));
+}

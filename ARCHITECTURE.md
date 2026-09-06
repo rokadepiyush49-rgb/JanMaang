@@ -43,6 +43,7 @@ lives in [the ADRs](docs/architecture/decisions/).
 | [0002](docs/architecture/decisions/0002-postgres-over-firestore.md) | Postgres + PostGIS primary; Firebase kept for Auth, FCM, Storage |
 | [0003](docs/architecture/decisions/0003-separate-ai-service.md) | One separate AI service, modular by capability, stateless |
 | [0004](docs/architecture/decisions/0004-single-web-app.md) | One web app with role-based routes, admin kept import-isolated |
+| [0005](docs/architecture/decisions/0005-council-in-the-web-app.md) | The AI Project Council runs in the web app — accepted debt against Invariant 3 |
 
 ## Invariants
 
@@ -54,7 +55,8 @@ These are load-bearing. Breaking one is an architecture change, not a refactor.
    module's `models.py` or `repository.py`. Enforced by `import-linter` in CI.
    This is what makes extraction possible later.
 3. **The AI service is internal.** The API is its only legitimate caller,
-   authenticated by a shared internal key.
+   authenticated by a shared internal key. One exception, time-boxed and
+   written down: the AI Project Council in `apps/web`, per ADR 0005.
 4. **Authorisation is server-side.** Client-side role checks are UX only.
 5. **Types are generated, one direction:** FastAPI → OpenAPI → TypeScript client
    and Dart models. Never hand-synced.

@@ -1,7 +1,9 @@
-/** Next.js picks this up automatically to process the @tailwind directives. */
+/**
+ * Tailwind v4 is CSS-first: the theme lives in @janmaang/tokens' generated
+ * @theme block, not in a JS config. Autoprefixer is built in — do not add it.
+ */
 export default {
   plugins: {
-    tailwindcss: {},
-    autoprefixer: {},
+    "@tailwindcss/postcss": {},
   },
 };
