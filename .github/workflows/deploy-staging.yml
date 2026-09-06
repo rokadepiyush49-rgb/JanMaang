@@ -20,6 +20,9 @@ jobs:
       packages: write
       id-token: write        # OIDC federation — no long-lived cloud keys in CI
     strategy:
+      # One image failing must not cancel the others — a half-built matrix
+      # tells you nothing about whether the rest are healthy.
+      fail-fast: false
       matrix:
         include:
           - { name: api, context: ./services/api, dockerfile: ./services/api/Dockerfile }
