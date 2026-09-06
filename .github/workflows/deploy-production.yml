@@ -38,6 +38,15 @@ jobs:
               --tag "ghcr.io/$repo/$s:production" \
               "ghcr.io/$repo/$s:${{ inputs.sha }}"
           done
+      # Checked before the backup and the migration, not after: a production
+      # release with no way to verify it must not start at all. Never skipped —
+      # an unverified promote would also never reach the rollback step below.
+      - name: Require a verifiable target
+        run: |
+          if [ -z "${{ vars.PRODUCTION_URL }}" ]; then
+            echo "::error title=PRODUCTION_URL is not set::Refusing to promote without a URL to smoke test. Set it under Settings → Secrets and variables → Actions → Variables."
+            exit 1
+          fi
       - name: Back up the database before migrating
         run: bash infrastructure/scripts/backup.sh
       - name: Migrate and release

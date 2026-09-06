@@ -5,11 +5,12 @@ codebase may call ``os.getenv`` — a typo in a variable name should fail at
 startup, not at 2am in the middle of a demo.
 """
 
+import json
 from functools import lru_cache
-from typing import Literal
+from typing import Annotated, Literal
 
 from pydantic import Field, PostgresDsn, RedisDsn, field_validator
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import BaseSettings, NoDecode, SettingsConfigDict
 
 Environment = Literal["development", "staging", "production"]
 
@@ -42,14 +43,23 @@ class Settings(BaseSettings):
     auth_secret: str = Field(min_length=16)
     access_token_ttl_minutes: int = 60
 
-    cors_origins: list[str] = Field(default_factory=list)
+    # NoDecode: pydantic-settings JSON-decodes complex types inside the env
+    # source, which happens *before* any validator runs — so a plain
+    # comma-separated CORS_ORIGINS raised SettingsError at import time.
+    # Opting out of that decode is what lets _split_origins see the raw string.
+    cors_origins: Annotated[list[str], NoDecode] = Field(default_factory=list)
 
     @field_validator("cors_origins", mode="before")
     @classmethod
     def _split_origins(cls, v: str | list[str]) -> list[str]:
-        if isinstance(v, str):
-            return [o.strip() for o in v.split(",") if o.strip()]
-        return v
+        if not isinstance(v, str):
+            return v
+        # A JSON array is still accepted: it is what pydantic-settings decoded
+        # for us before NoDecode, so deployed environments may already hold one.
+        if v.lstrip().startswith("["):
+            decoded = json.loads(v)
+            return [str(o).strip() for o in decoded if str(o).strip()]
+        return [o.strip() for o in v.split(",") if o.strip()]
 
     @property
     def is_production(self) -> bool:

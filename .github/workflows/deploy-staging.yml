@@ -64,5 +64,16 @@ jobs:
           echo "TODO(deploy): alembic upgrade head, then roll the services."
           echo "Runtime secrets come from the platform's secret manager — CI holds"
           echo "deploy credentials only and never sees LLM_API_KEY."
+      # STAGING_URL is a repository variable (Settings → Secrets and variables →
+      # Actions → Variables). Until it is set there is no deployed staging
+      # environment to probe, and passing an empty URL just trips the script's
+      # own usage guard — a confusing failure that says nothing about the deploy.
       - name: Smoke test
-        run: bash infrastructure/scripts/smoke-test.sh "${{ vars.STAGING_URL }}"
+        env:
+          BASE_URL: ${{ vars.STAGING_URL }}
+        run: |
+          if [ -z "$BASE_URL" ]; then
+            echo "::warning title=Smoke test skipped::STAGING_URL is not set, so there is no deployed environment to verify. Set it under Settings → Secrets and variables → Actions → Variables."
+            exit 0
+          fi
+          bash infrastructure/scripts/smoke-test.sh "$BASE_URL"
