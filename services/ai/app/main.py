@@ -17,8 +17,8 @@ STATELESS. This service owns no domain tables and never talks to the business
 database. The API calls it and persists the result.
 """
 
-from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 from fastapi import Depends, FastAPI, Header, HTTPException, status
 
@@ -55,9 +55,7 @@ async def verify_internal_key(x_internal_key: str = Header(default="")) -> None:
     """This service is internal-only. The API is its sole legitimate caller."""
     settings = get_settings()
     if not settings.internal_api_key or x_internal_key != settings.internal_api_key:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid internal key"
-        )
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid internal key")
 
 
 @asynccontextmanager

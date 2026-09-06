@@ -15,9 +15,7 @@ Environment = Literal["development", "staging", "production"]
 
 
 class Settings(BaseSettings):
-    model_config = SettingsConfigDict(
-        env_file=".env", env_file_encoding="utf-8", extra="ignore"
-    )
+    model_config = SettingsConfigDict(env_file=".env", env_file_encoding="utf-8", extra="ignore")
 
     environment: Environment = "development"
     debug: bool = False
@@ -61,4 +59,4 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     """Cached so the file is parsed once per process."""
-    return Settings()  # type: ignore[call-arg]
+    return Settings()

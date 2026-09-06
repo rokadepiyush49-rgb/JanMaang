@@ -1,7 +1,7 @@
 """Entrypoint for `python -m app.seeds`.
 
-    python -m app.seeds                reference + demo
-    python -m app.seeds --reference    reference only
+python -m app.seeds                reference + demo
+python -m app.seeds --reference    reference only
 """
 
 import argparse

@@ -17,7 +17,6 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       - uses: pnpm/action-setup@v4
-        with: { version: 9 }
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
@@ -26,4 +25,7 @@ jobs:
       - run: pnpm -r lint
       - run: pnpm -r typecheck
       - run: pnpm -r test
+      # dist/tokens.css is generated from tokens.json and gitignored, and
+      # globals.css imports it — next build cannot resolve it otherwise.
+      - run: pnpm --filter @janmaang/tokens build
       - run: pnpm --filter @janmaang/web build

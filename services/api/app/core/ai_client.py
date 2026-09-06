@@ -36,9 +36,7 @@ class AIClient:
 
     async def classify(self, text: str, language: str | None = None) -> dict[str, Any]:
         """Free-text report → category, severity, suggested department."""
-        return await self._post(
-            "/v1/classify", {"text": text, "language": language}
-        )
+        return await self._post("/v1/classify", {"text": text, "language": language})
 
     async def embed(self, texts: list[str]) -> dict[str, Any]:
         """Embeddings for duplicate detection. Vectors are stored by the API."""

@@ -12,6 +12,8 @@ from uuid import UUID
 from fastapi import Depends, HTTPException, status
 from fastapi.security import HTTPAuthorizationCredentials, HTTPBearer
 
+from app.core.roles import Role
+
 _bearer = HTTPBearer(auto_error=False)
 
 
@@ -21,7 +23,7 @@ class Principal:
 
     user_id: UUID
     firebase_uid: str
-    role: "object"  # Role; annotated loosely to avoid a circular import
+    role: Role
     district_id: UUID | None = None
     department_id: UUID | None = None
     institute_id: UUID | None = None

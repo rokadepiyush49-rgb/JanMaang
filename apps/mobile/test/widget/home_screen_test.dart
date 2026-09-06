@@ -23,14 +23,14 @@ void main() {
     await pumpHome(tester, const Size(390, 2400));
 
     expect(tester.takeException(), isNull);
-    expect(find.text('Make your community heard.'), findsOneWidget);
+    expect(find.text('What does your community need?'), findsOneWidget);
   });
 
   testWidgets('builds on a wide tablet layout', (tester) async {
     await pumpHome(tester, const Size(1100, 2400));
 
     expect(tester.takeException(), isNull);
-    expect(find.text('Make your community heard.'), findsOneWidget);
+    expect(find.text('What does your community need?'), findsOneWidget);
   });
 
   testWidgets('shows the community pulse figures once loaded', (tester) async {
@@ -39,9 +39,9 @@ void main() {
     // the tree never reaches a settled state.
     await tester.pump(const Duration(seconds: 1));
 
-    expect(find.text('Active Demands'), findsOneWidget);
-    expect(find.text('People Affected'), findsOneWidget);
-    expect(find.text('Under Review'), findsOneWidget);
+    expect(find.text('Active demands'), findsOneWidget);
+    expect(find.text('People affected'), findsOneWidget);
+    expect(find.text('Under review'), findsOneWidget);
     expect(find.text('Funded'), findsOneWidget);
     expect(tester.takeException(), isNull);
   });

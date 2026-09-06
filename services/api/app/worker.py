@@ -10,7 +10,7 @@ before/after image analysis, batch deduplication, problem-statement generation.
 Anything a citizen waits on stays in the request path.
 """
 
-from typing import Any
+from typing import Any, ClassVar
 
 from arq.connections import RedisSettings
 
@@ -32,11 +32,11 @@ async def shutdown(ctx: dict[str, Any]) -> None:
 class WorkerSettings:
     """Discovered by `arq app.worker.WorkerSettings` (see docker-compose.yml)."""
 
-    functions: list[Any] = [
+    functions: ClassVar[list[Any]] = [
         # Registered from each module's tasks.py as they land, e.g.
         # problems_tasks.cluster_demand, problems_tasks.recompute_priority
     ]
-    cron_jobs: list[Any] = []
+    cron_jobs: ClassVar[list[Any]] = []
     on_startup = startup
     on_shutdown = shutdown
     redis_settings = RedisSettings.from_dsn(str(get_settings().redis_url))

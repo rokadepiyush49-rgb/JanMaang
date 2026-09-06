@@ -7,8 +7,8 @@ pyproject.toml keeps the module seams real, so any module can be extracted into
 its own service later without changing a caller.
 """
 
-from contextlib import asynccontextmanager
 from collections.abc import AsyncIterator
+from contextlib import asynccontextmanager
 
 from fastapi import APIRouter, FastAPI
 from fastapi.middleware.cors import CORSMiddleware

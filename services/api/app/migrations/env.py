@@ -18,9 +18,27 @@ from app.core.database import Base
 # Importing every module's models registers them on Base.metadata so
 # --autogenerate sees the full schema. Add new modules here.
 from app.modules import (  # noqa: F401
-    academics, analytics, audit, auth, buildfolio, departments, feedback,
-    files, funding, geography, impact, industry, leaderboard, maps,
-    notifications, problem_statements, problems, projects, rbac, teams, users,
+    academics,
+    analytics,
+    audit,
+    auth,
+    buildfolio,
+    departments,
+    feedback,
+    files,
+    funding,
+    geography,
+    impact,
+    industry,
+    leaderboard,
+    maps,
+    notifications,
+    problem_statements,
+    problems,
+    projects,
+    rbac,
+    teams,
+    users,
 )
 
 config = context.config
@@ -33,9 +51,9 @@ target_metadata = Base.metadata
 
 def _include_object(obj, name, type_, reflected, compare_to) -> bool:  # type: ignore[no-untyped-def]
     """Skip PostGIS's own bookkeeping tables so autogenerate ignores them."""
-    if type_ == "table" and name in {"spatial_ref_sys", "geography_columns", "geometry_columns"}:
-        return False
-    return True
+    return not (
+        type_ == "table" and name in {"spatial_ref_sys", "geography_columns", "geometry_columns"}
+    )
 
 
 def run_migrations_offline() -> None:

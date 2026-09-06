@@ -60,34 +60,29 @@ markers = [
 ]
 
 # ─────────────────────────────────────────────────────────────────────────────
-# THE rule that keeps the modular monolith modular — and makes §19 extraction
-# possible later. A module may import another module's public face (service,
-# schemas). It may NEVER reach into another module's models or repository.
-# Violate this and modules fuse together; extracting one later becomes a rewrite.
+# Module boundaries.
+#
+# The cross-module rule ("no module may import another module's models or
+# repository") is enforced by tests/unit/test_module_boundaries.py, which walks
+# the AST. It is NOT expressed here: an import-linter `forbidden` contract with
+# two wildcards does not correlate them, so `projects.service -> problems.models`
+# would pass while looking like it was covered. An exact check is worth more
+# than a rule that only appears to hold.
+#
+# What import-linter does enforce is the dependency direction below, which its
+# contract types express precisely.
 # ─────────────────────────────────────────────────────────────────────────────
 [tool.importlinter]
 root_package = "app"
-
-[[tool.importlinter.contracts]]
-name = "Modules never import another module's models or repository"
-type = "forbidden"
-source_modules = ["app.modules"]
-forbidden_modules = ["app.modules.*.models", "app.modules.*.repository"]
-allow_indirect_imports = false
-unmatched_ignore_imports_alias = "ignore"
-ignore_imports = [
-    # A module importing its OWN internals is fine; the contract targets
-    # cross-module reach-through, listed explicitly in docs/architecture.
-    "app.modules.*.router -> app.modules.*.models",
-    "app.modules.*.service -> app.modules.*.models",
-    "app.modules.*.service -> app.modules.*.repository",
-    "app.modules.*.repository -> app.modules.*.models",
-    "app.modules.*.tasks -> app.modules.*.models",
-    "app.modules.*.tasks -> app.modules.*.repository",
-]
 
 [[tool.importlinter.contracts]]
 name = "core and shared never depend on modules"
 type = "forbidden"
 source_modules = ["app.core", "app.shared"]
 forbidden_modules = ["app.modules"]
+
+[[tool.importlinter.contracts]]
+name = "shared never depends on core"
+type = "forbidden"
+source_modules = ["app.shared"]
+forbidden_modules = ["app.core"]

@@ -45,7 +45,7 @@ pnpm install                              && ok "pnpm workspace"
 (cd apps/mobile  && flutter pub get)      && ok "apps/mobile"
 
 bold "Generating design tokens"
-pnpm --filter @janmaang/tokens build >/dev/null 2>&1 && ok "tokens" || warn "token generator not implemented yet"
+pnpm --filter @janmaang/tokens build >/dev/null && ok "tokens"
 
 bold "Starting the database"
 docker compose up -d postgres redis

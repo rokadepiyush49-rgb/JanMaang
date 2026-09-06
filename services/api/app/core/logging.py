@@ -14,9 +14,7 @@ from app.core.config import get_settings
 
 def configure_logging() -> None:
     settings = get_settings()
-    logging.basicConfig(
-        format="%(message)s", stream=sys.stdout, level=settings.log_level
-    )
+    logging.basicConfig(format="%(message)s", stream=sys.stdout, level=settings.log_level)
     structlog.configure(
         processors=[
             structlog.contextvars.merge_contextvars,

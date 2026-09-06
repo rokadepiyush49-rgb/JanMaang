@@ -17,13 +17,17 @@ COPY packages/config/package.json ./packages/config/
 RUN --mount=type=cache,id=pnpm,target=/pnpm/store \
     pnpm install --frozen-lockfile 2>/dev/null || pnpm install
 
-FROM deps AS development
+# Sources plus the generated design tokens. dist/tokens.css is gitignored and
+# globals.css imports it, so every stage that compiles the app needs it built.
+FROM deps AS src
 COPY . .
+RUN pnpm --filter @janmaang/tokens build
+
+FROM src AS development
 EXPOSE 3000
 CMD ["pnpm", "--filter", "@janmaang/web", "dev"]
 
-FROM deps AS builder
-COPY . .
+FROM src AS builder
 ENV NEXT_TELEMETRY_DISABLED=1
 RUN pnpm --filter @janmaang/web build
 

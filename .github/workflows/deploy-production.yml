@@ -31,10 +31,12 @@ jobs:
           password: ${{ secrets.GITHUB_TOKEN }}
       - name: Retag staging images as production
         run: |
+          # ghcr.io rejects uppercase repository names.
+          repo="${GITHUB_REPOSITORY,,}"
           for s in api ai web; do
             docker buildx imagetools create \
-              --tag "ghcr.io/${{ github.repository }}/$s:production" \
-              "ghcr.io/${{ github.repository }}/$s:${{ inputs.sha }}"
+              --tag "ghcr.io/$repo/$s:production" \
+              "ghcr.io/$repo/$s:${{ inputs.sha }}"
           done
       - name: Back up the database before migrating
         run: bash infrastructure/scripts/backup.sh

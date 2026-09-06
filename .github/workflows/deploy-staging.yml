@@ -33,6 +33,11 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
+      # ghcr.io rejects uppercase repository names, and github.repository
+      # carries the repo's own casing. Lowercase it once, here.
+      - name: Lowercase image namespace
+        id: img
+        run: echo "repo=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
       - uses: docker/build-push-action@v6
         with:
           context: ${{ matrix.context }}
@@ -40,8 +45,8 @@ jobs:
           target: production
           push: true
           tags: |
-            ghcr.io/${{ github.repository }}/${{ matrix.name }}:staging
-            ghcr.io/${{ github.repository }}/${{ matrix.name }}:${{ github.sha }}
+            ghcr.io/${{ steps.img.outputs.repo }}/${{ matrix.name }}:staging
+            ghcr.io/${{ steps.img.outputs.repo }}/${{ matrix.name }}:${{ github.sha }}
           cache-from: type=gha,scope=${{ matrix.name }}
           cache-to: type=gha,mode=max,scope=${{ matrix.name }}
 

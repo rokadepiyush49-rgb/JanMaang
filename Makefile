@@ -123,7 +123,7 @@ test-mobile: ## Flutter unit and widget tests
 	cd $(MOBILE) && flutter test
 
 test-e2e: ## Cross-service journeys against a running stack
-	pnpm --filter @janmaang/e2e test
+	pnpm --filter @janmaang/e2e e2e
 
 evals: ## AI quality evals against golden datasets. Makes real LLM calls — costs money.
 	$(COMPOSE) exec -T ai python -m evals.report
