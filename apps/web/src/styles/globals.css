@@ -1,0 +1,22 @@
+/*
+ * Design tokens come from @janmaang/tokens, generated from one JSON source
+ * shared with the Flutter app. The five-tier palette is load-bearing: the map
+ * legend and the wordmark are the same colours, so they must not drift between
+ * web and mobile. Never hard-code a brand hex here.
+ */
+@import "@janmaang/tokens/tokens.css";
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  color-scheme: light dark;
+}
+
+body {
+  margin: 0;
+  background: var(--jm-surface);
+  color: var(--jm-on-surface);
+  font-family: var(--jm-font-sans);
+}

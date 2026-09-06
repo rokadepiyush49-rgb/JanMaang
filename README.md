@@ -9,6 +9,74 @@ whether it was actually fixed.
 
 **Speak → Analyze → Cluster → Prioritise → Fund → Execute → Citizen Verify**
 
+## Quickstart
+
+```bash
+git clone https://github.com/<org>/janmaang.git
+cd janmaang
+make setup     # tools, .env files, dependencies, database, seed data
+make dev       # postgres, redis, api, worker, ai, web
+```
+
+- web — <http://localhost:3000>
+- API docs — <http://localhost:8000/docs>
+- AI docs — <http://localhost:8001/docs>
+- citizen app — `make mobile`
+
+`make help` lists every target. `make doctor` diagnoses a broken environment.
+Full instructions: [docs/development/setup.md](docs/development/setup.md).
+
+## The repository
+
+One repository, three ecosystems, one command surface. Flutter uses pub,
+TypeScript uses pnpm workspaces, Python uses uv — and `make` sits in front of all
+three so there is one interface to learn. See
+[ADR 0001](docs/architecture/decisions/0001-one-repository.md) for why.
+
+```
+apps/
+  mobile/          Flutter — the citizen app (offline-first)
+  web/             Next.js — nine role dashboards in one application
+services/
+  api/             FastAPI modular monolith. Owns the schema.
+                   The worker is this same image with a different command.
+  ai/              One internal AI service, modular by capability. Stateless.
+packages/
+  contracts/       Generated API contract → TypeScript client + Dart models
+  tokens/          Design tokens → CSS variables + Dart constants
+  ui/              React primitives (web only)
+  config/          Shared lint/TS/Tailwind presets
+infrastructure/    Docker, Terraform, Kubernetes, ops scripts
+docs/              Architecture, ADRs, API, database, AI, deployment, product
+scripts/           setup · doctor · contract generation
+tests/e2e/         Cross-service journeys
+```
+
+## Architecture in four decisions
+
+| | Decision | Why |
+|---|---|---|
+| [0001](docs/architecture/decisions/0001-one-repository.md) | One repository, polyglot, no monorepo tool | A contract change is one PR, validated end-to-end |
+| [0002](docs/architecture/decisions/0002-postgres-over-firestore.md) | Postgres + PostGIS primary; Firebase for Auth/FCM/Storage | Nine dashboards and a leaderboard are joins and aggregations |
+| [0003](docs/architecture/decisions/0003-separate-ai-service.md) | One separate AI service, modular by capability | ML deps, 2–30s calls and crash isolation |
+| [0004](docs/architecture/decisions/0004-single-web-app.md) | One web app with role-based routes | Nine apps means nine auth implementations |
+
+## Contributing
+
+Read [CONTRIBUTING.md](CONTRIBUTING.md). Short version: branch from `main`,
+keep it under two days and 400 lines, run `make check`, open a PR.
+
+---
+
+A civic demand-to-budget platform. A citizen reports a local need in their own
+voice; AI structures it; identical reports are clustered so forty people asking
+for the same handpump count as one demand with the weight of forty; the demand
+is ranked against every other demand in the district on five published factors;
+government funds down the ranked list; and the citizens who reported it decide
+whether it was actually fixed.
+
+**Speak → Analyze → Cluster → Prioritise → Fund → Execute → Citizen Verify**
+
 ## The map
 
 Issues are plotted at their coordinates and **aggregated by location**: forty
@@ -51,95 +119,46 @@ mapping and the full token table.
 
 ## Stack
 
-Flutter · Dart · Material 3 · Riverpod 3 · go_router · flutter_map +
-OpenStreetMap · Firebase (Auth, Firestore, Storage, Functions, Messaging,
-Analytics, Crashlytics) · Google Sign-In · Gemini (server-side only)
+| Layer | Choice | Notes |
+|---|---|---|
+| Citizen app | Flutter · Riverpod · go_router · flutter_map | Offline-first. See [apps/mobile](apps/mobile/README.md) |
+| Web platform | Next.js · TypeScript · React Query | One app, nine role route groups |
+| API | FastAPI · SQLAlchemy · Alembic | Modular monolith; owns the schema |
+| Worker | ARQ | Same image as the API, different command |
+| AI | FastAPI · Gemini | One internal service, modular by capability |
+| Data | PostgreSQL 16 · PostGIS · pgvector | Geo clustering, ranking, dedup embeddings |
+| Cache / queue | Redis | |
+| Identity, push, files | Firebase Auth · FCM · Storage | Retained deliberately — see [ADR 0002](docs/architecture/decisions/0002-postgres-over-firestore.md) |
 
-The brief asked for Framer Motion and Leaflet. Both are React libraries and
-cannot run in Flutter, so their roles are filled by the platform equivalents:
-**flutter_map** renders the same OpenStreetMap tiles under the same ODbL
-attribution, and the motion system in `lib/core/theme/motion.dart` provides the
-page transitions, staggered entrances, counters and press feedback. Every
-animation honours the platform reduce-motion setting.
-
-## Running it
-
-The app runs out of the box against in-memory repositories seeded with the same
-figures the designs were reviewed with, so no Firebase project is needed to see
-or test the whole UI:
-
-```bash
-flutter run
-```
-
-For demos and screenshots, skip the OTP step:
-
-```bash
-flutter run --dart-define=DEMO_SIGNED_IN=true
-```
-
-Against live Firebase:
-
-```bash
-flutterfire configure --project=<your-project-id>
-# then follow the TODO in lib/bootstrap.dart
-flutter run --dart-define=USE_MOCKS=false
-```
-
-Google Maps surfaces stay as styled placeholders until a platform key is
-provisioned; enable them with `--dart-define=MAPS_ENABLED=true`.
-
-## Architecture
-
-```
-lib/
-  core/        config · constants · theme · routing · services · errors · utils
-  features/    onboarding auth home report demands ledger verification profile
-                 each with data/ domain/ presentation/
-  shared/      models · widgets (the design-system component library)
-```
-
-Presentation never imports `cloud_firestore`. Repositories are interfaces in
-`domain/`, implemented twice in `data/` — against Firebase and in memory — and
-selected at the composition root in `lib/core/providers.dart`. Swapping one out
-is a one-line override, which is also how the tests inject fakes.
-
-See [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) for the data model, the
-Firestore collections and the Cloud Function boundaries.
-
-## Brand and photography
-
-Two asset slots, both with graceful fallbacks so the build never breaks on a
-missing file:
-
-- `assets/brand/` — the logo lockup and square mark. `JmLogo` falls back to a
-  typographic lockup. Launcher icons, favicon and splash are generated from the
-  mark via `flutter_launcher_icons.yaml` and `flutter_native_splash.yaml`.
-- `assets/gallery/` — the four infrastructure photographs behind the
-  auto-scrolling gallery on Home (`roads.jpg`, `transit.jpg`, `civic.jpg`,
-  `water.jpg`). Until they land, each slide renders a designed gradient card
-  with its icon and caption.
-
-See the README in each directory for sizes and export settings.
-
-## Security
-
-No server-side credential ships in the app. The Gemini key lives in Secret
-Manager and is reachable only through the `analyzeReport` callable; ranking,
-clustering, funding and verification are all server-write-only, enforced by
-`firebase/firestore.rules`. See [SECURITY.md](SECURITY.md).
+Design tokens are generated from one JSON source into both CSS variables and
+Dart constants (`packages/tokens`), so the five-tier density palette cannot
+drift between the map legend and the wordmark.
 
 ## Checks
 
 ```bash
-flutter analyze
-flutter test
+make check    # lint, typecheck and tests across every ecosystem — what CI runs
+make test     # tests only
+make lint     # lint only
 ```
 
-## Platform status
+Per-ecosystem: `make test-api`, `make test-ai`, `make test-web`, `make test-mobile`.
 
-| Target | State |
+## Security
+
+No server-side credential ships in any client. The Gemini key lives in the AI
+service, reachable only through the API, which is the AI service's sole
+legitimate caller; ranking, clustering, funding and verification are all
+server-write-only. Secrets are scanned by gitleaks in a pre-commit hook and again
+in CI. See [SECURITY.md](SECURITY.md).
+
+## Component documentation
+
+| | |
 |---|---|
-| Android | builds; toolchain configured against SDK 36.1.0 + JDK 17 |
-| Web | builds and runs; used for UI verification in this environment |
-| iOS | needs a full Xcode install (only Command Line Tools present) plus CocoaPods |
+| [apps/mobile](apps/mobile/README.md) | Citizen app — running it, mocks, brand assets, platform status |
+| [docs/development/setup.md](docs/development/setup.md) | Full local setup |
+| [docs/development/workflow.md](docs/development/workflow.md) | Branching and PR rules |
+| [docs/product/roles.md](docs/product/roles.md) | The nine roles and the permission matrix |
+| [docs/product/glossary.md](docs/product/glossary.md) | Demand vs Cluster vs Problem Statement vs Project |
+| [docs/SOURCES.md](docs/SOURCES.md) | Data provenance — rendered by the app at `/method` |

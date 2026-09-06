@@ -1,0 +1,93 @@
+[project]
+name = "janmaang-api"
+version = "0.1.0"
+description = "JanMaang API — modular monolith. Owns the schema; the worker shares this image."
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn[standard]>=0.32.0",
+    "pydantic>=2.9.0",
+    "pydantic-settings>=2.6.0",
+    "sqlalchemy[asyncio]>=2.0.36",
+    "asyncpg>=0.30.0",
+    "alembic>=1.14.0",
+    "geoalchemy2>=0.15.2",
+    "pgvector>=0.3.6",
+    "redis>=5.2.0",
+    "arq>=0.26.1",
+    "httpx>=0.27.2",
+    "firebase-admin>=6.6.0",
+    "python-multipart>=0.0.12",
+    "structlog>=24.4.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.3",
+    "pytest-asyncio>=0.24.0",
+    "pytest-cov>=6.0.0",
+    "testcontainers[postgres]>=4.8.2",
+    "ruff>=0.7.4",
+    "mypy>=1.13.0",
+    "import-linter>=2.1",
+]
+
+[tool.ruff]
+line-length = 100
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "N", "UP", "B", "A", "C4", "SIM", "RUF"]
+ignore = ["B008"]  # FastAPI's Depends() in defaults is the documented idiom.
+
+[tool.mypy]
+python_version = "3.12"
+plugins = ["pydantic.mypy"]
+strict = true
+warn_return_any = true
+disallow_untyped_defs = true
+
+[[tool.mypy.overrides]]
+module = ["geoalchemy2.*", "firebase_admin.*", "arq.*"]
+ignore_missing_imports = true
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+testpaths = ["tests"]
+markers = [
+    "integration: needs a real Postgres (testcontainers)",
+    "slow: excluded from the PR fast path",
+]
+
+# ─────────────────────────────────────────────────────────────────────────────
+# THE rule that keeps the modular monolith modular — and makes §19 extraction
+# possible later. A module may import another module's public face (service,
+# schemas). It may NEVER reach into another module's models or repository.
+# Violate this and modules fuse together; extracting one later becomes a rewrite.
+# ─────────────────────────────────────────────────────────────────────────────
+[tool.importlinter]
+root_package = "app"
+
+[[tool.importlinter.contracts]]
+name = "Modules never import another module's models or repository"
+type = "forbidden"
+source_modules = ["app.modules"]
+forbidden_modules = ["app.modules.*.models", "app.modules.*.repository"]
+allow_indirect_imports = false
+unmatched_ignore_imports_alias = "ignore"
+ignore_imports = [
+    # A module importing its OWN internals is fine; the contract targets
+    # cross-module reach-through, listed explicitly in docs/architecture.
+    "app.modules.*.router -> app.modules.*.models",
+    "app.modules.*.service -> app.modules.*.models",
+    "app.modules.*.service -> app.modules.*.repository",
+    "app.modules.*.repository -> app.modules.*.models",
+    "app.modules.*.tasks -> app.modules.*.models",
+    "app.modules.*.tasks -> app.modules.*.repository",
+]
+
+[[tool.importlinter.contracts]]
+name = "core and shared never depend on modules"
+type = "forbidden"
+source_modules = ["app.core", "app.shared"]
+forbidden_modules = ["app.modules"]
