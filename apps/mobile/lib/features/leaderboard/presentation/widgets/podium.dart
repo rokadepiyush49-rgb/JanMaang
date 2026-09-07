@@ -23,26 +23,29 @@ class Podium extends StatelessWidget {
     final second = top.length > 1 ? top[1] : null;
     final third = top.length > 2 ? top[2] : null;
 
-    return SizedBox(
-      height: 210,
-      child: Row(
-        crossAxisAlignment: CrossAxisAlignment.end,
-        children: <Widget>[
-          Expanded(
-            child: second == null
-                ? const SizedBox.shrink()
-                : _Plinth(contributor: second, height: 96, delay: 2),
-          ),
-          const SizedBox(width: Insets.sm),
-          Expanded(child: _Plinth(contributor: first, height: 132, delay: 0)),
-          const SizedBox(width: Insets.sm),
-          Expanded(
-            child: third == null
-                ? const SizedBox.shrink()
-                : _Plinth(contributor: third, height: 74, delay: 3),
-          ),
-        ],
-      ),
+    // No fixed frame: the row takes the height of the tallest plinth, and
+    // `CrossAxisAlignment.end` sits the three of them on a common baseline.
+    // A hard-coded height here cannot survive a longer name or a larger text
+    // scale — it just clips the winner, who is the one card that must read.
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.end,
+      children: <Widget>[
+        Expanded(
+          child: second == null
+              ? const SizedBox.shrink()
+              : _Plinth(contributor: second, plinthHeight: 96, delay: 2),
+        ),
+        const SizedBox(width: Insets.sm),
+        Expanded(
+          child: _Plinth(contributor: first, plinthHeight: 132, delay: 0),
+        ),
+        const SizedBox(width: Insets.sm),
+        Expanded(
+          child: third == null
+              ? const SizedBox.shrink()
+              : _Plinth(contributor: third, plinthHeight: 74, delay: 3),
+        ),
+      ],
     );
   }
 }
@@ -50,12 +53,16 @@ class Podium extends StatelessWidget {
 class _Plinth extends StatelessWidget {
   const _Plinth({
     required this.contributor,
-    required this.height,
+    required this.plinthHeight,
     required this.delay,
   });
 
   final Contributor contributor;
-  final double height;
+
+  /// How tall the plinth block stands at rest. It is a floor the animation
+  /// grows towards, never a ceiling on the rank and points inside it.
+  final double plinthHeight;
+
   final int delay;
 
   @override
@@ -70,7 +77,6 @@ class _Plinth extends StatelessWidget {
     };
 
     return Column(
-      mainAxisAlignment: MainAxisAlignment.end,
       mainAxisSize: MainAxisSize.min,
       children: <Widget>[
         if (isFirst)
@@ -127,9 +133,15 @@ class _Plinth extends StatelessWidget {
               ? Duration.zero
               : Motion.slow + Motion.stagger * delay,
           curve: Motion.enter,
-          builder: (context, t, child) => SizedBox(
-            height: height * t,
-            width: double.infinity,
+          // `minHeight`, not a fixed height: the block grows to the height the
+          // design calls for, but never shrinks below the rank and points it
+          // has to hold — including early in the reveal, and at large text
+          // scales where those two lines alone are taller than the plinth.
+          builder: (context, t, child) => ConstrainedBox(
+            constraints: BoxConstraints(
+              minWidth: double.infinity,
+              minHeight: plinthHeight * t,
+            ),
             child: child,
           ),
           child: Container(
@@ -148,8 +160,9 @@ class _Plinth extends StatelessWidget {
               border: Border.all(color: medal.withValues(alpha: 0.4)),
             ),
             child: Padding(
-              padding: const EdgeInsets.only(top: Insets.sm),
+              padding: const EdgeInsets.symmetric(vertical: Insets.sm),
               child: Column(
+                mainAxisSize: MainAxisSize.min,
                 children: <Widget>[
                   Text(
                     '#${contributor.rank}',
