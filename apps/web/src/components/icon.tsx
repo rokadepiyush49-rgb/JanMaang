@@ -73,7 +73,14 @@ const P = {
     <>
       {[5, 12, 19].map((y) =>
         [5, 12, 19].map((x) => (
-          <circle cx={x} cy={y} fill="currentColor" key={`${x}-${y}`} r="1.6" stroke="none" />
+          <circle
+            cx={x}
+            cy={y}
+            fill="currentColor"
+            key={`${x}-${y}`}
+            r="1.6"
+            stroke="none"
+          />
         )),
       )}
     </>
@@ -181,6 +188,12 @@ const P = {
     <>
       <path d="m3 17 6.2-6.2 3.5 3.5L21 6" />
       <path d="M15.5 6H21v5.5" />
+    </>
+  ),
+  "trending-down": (
+    <>
+      <path d="m3 7 6.2 6.2 3.5-3.5L21 18" />
+      <path d="M15.5 18H21v-5.5" />
     </>
   ),
   sparkles: (
