@@ -90,6 +90,152 @@ flowchart LR
 An **Independent Tracking Agent** monitors every problem statement from report to
 resolution. It records status, keeps the process transparent, and captures impact.
 
+### Stakeholder workflow
+
+Who hands what to whom. The Gram Panchayat or department filters each report and decides
+whether it goes out as a free or government-sponsored problem statement, or to industry for
+sponsorship. Students reach problems through their institute, and citizens close the loop.
+
+```mermaid
+flowchart LR
+    subgraph civic["Civic side"]
+        C["Citizens<br/>voice · photo · text<br/>offline-first app"]
+        GP["Gram Panchayat /<br/>Gov Department<br/>filtration · AI filtration<br/>PS assignment"]
+        D["Line departments<br/>e.g. Railways"]
+    end
+
+    PS["Problem Statement"]
+
+    subgraph industry["Industry side"]
+        IND["Industries / CSR<br/>CSR programme scope<br/>talent hunt from universities"]
+        GAM["Gamification<br/>ranking · Social Impact titles<br/>long-term awards"]
+        BEN["Benefits<br/>tax benefits · funding"]
+    end
+
+    subgraph academia["Academia"]
+        INST["Institutes"]
+        FAC["Faculty<br/>validate · mentor · assign"]
+        STU["Students<br/>AI skill & career profiler<br/>contributor leaderboard"]
+    end
+
+    GOV["Government<br/>universal portal, visible to all<br/>impact dashboard · before / after"]
+
+    C <-->|"report · vote"| GP
+    D -->|"day-to-day domain problems"| GP
+    GP -->|"gov-sponsored / free"| PS
+    GP -->|"needs sponsored industrial help"| IND
+    IND -->|"if approved"| PS
+    IND -->|"hackathons"| PS
+    PS -.->|"AI matching engine"| IND
+    IND --> GAM
+    IND --> BEN
+    PS -->|"published to matched institutes"| INST
+    INST -->|"AI shortlists best-fit students"| FAC
+    FAC -->|"team formation"| STU
+    STU -->|"open innovation · proposed solutions"| INST
+    INST -->|"proposals"| PS
+    PS -->|"before / after photos · milestones"| C
+    C -->|"rating + feedback"| PS
+    GOV -->|"recognition"| INST
+```
+
+Students start with *good first issues*: small government problems that build trust, give a
+performance record, and count as experience with government projects.
+
+### Example: a department feeding the pipeline
+
+Each officer gets a dashboard of day-to-day problems from their own domain. Using Indian
+Railways as the example:
+
+```mermaid
+flowchart TB
+    subgraph dash["Department dashboard"]
+        DRM["DRM · Officer 01<br/>divisional decisions<br/>and coordination"]
+        DEN["DEN · Officer 02<br/>tracks, bridges,<br/>engineering"]
+        DOM["DOM · Officer 03<br/>train operations,<br/>traffic, efficiency"]
+        DEE["DEE · Officer 04<br/>electrical systems,<br/>traction, power"]
+    end
+    RD["Railway Department"]
+    GP["Gram Panchayat /<br/>Gov Department intake"]
+    PS["Problem Statement"]
+
+    DRM --> RD
+    DEN --> RD
+    DOM --> RD
+    DEE --> RD
+    RD --> GP
+    GP --> PS
+```
+
+### From report to ranked demand
+
+A report never waits on the model. The API stores it and answers straight away, and the
+worker does the AI work in the background.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor C as Citizen
+    participant M as Mobile app
+    participant API as services/api
+    participant Q as Redis queue
+    participant W as Worker
+    participant AI as services/ai
+    participant DB as Postgres
+    actor GP as Gram Panchayat
+
+    C->>M: Speak, snap a photo, or type
+    M->>M: Save to the local outbox (works offline)
+    M->>API: Submit the demand once online
+    API->>DB: Store the demand (reported)
+    API->>Q: Enqueue analysis
+    API-->>M: Accepted, nothing waits on the LLM
+    Q->>W: Pick up the job
+    W->>AI: Transcribe, translate, classify, embed
+    W->>DB: Find nearby, similar demands (PostGIS 150 m + pgvector)
+    W->>AI: Same physical thing? (LLM adjudication)
+    W->>DB: Join a cluster or start one (clustered)
+    W->>AI: Priority score
+    W->>DB: Save the score (ranked)
+    W-->>GP: Notify about the ranked demand
+    alt Valid and local
+        GP->>API: Approve and assign
+    else Spam or out of scope
+        GP->>API: Reject with a reason
+    end
+    API-->>C: Status update by push (FCM)
+```
+
+### From problem statement to verified fix
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant D as Department
+    participant PS as Problem Statement Engine
+    participant IN as Industry / CSR
+    participant I as Institute
+    participant F as Faculty
+    participant S as Student team
+    actor C as Citizens
+    participant G as Government dashboard
+
+    D->>PS: Publish a statement from a ranked cluster
+    PS-->>IN: AI matching suggests sponsors and hackathons
+    IN->>PS: Sponsor it (CSR)
+    PS->>I: Send to best-fit institutes
+    I->>F: AI shortlists best-fit students
+    F->>S: Validate, mentor, form the team
+    S->>PS: Proposal, milestones, builds
+    D->>PS: Allocate and disburse funds
+    PS-->>C: Before / after photos and milestones
+    C->>PS: Verify the fix, rate it, give feedback
+    PS->>S: Verified project goes into the Buildfolio
+    PS->>G: Record the impact
+    G-->>I: Recognition
+    G-->>IN: Leaderboard, Social Impact titles, benefits
+```
+
 ### Lifecycle vocabulary
 
 Each term means one thing everywhere: in the database, the API, and all three codebases.
@@ -98,6 +244,25 @@ See [docs/product/glossary.md](docs/product/glossary.md).
 > **Demand** → clustered into a **Cluster** → ranked by **Priority Score** → published as a
 > **Problem Statement** → built by a **Project** → funded via **Allocation** →
 > **Disbursement** → **Verification** → **Impact**
+
+A problem moves through the statuses in `ProblemStatus`
+([services/api/app/shared/enums.py](services/api/app/shared/enums.py)):
+
+```mermaid
+stateDiagram-v2
+    [*] --> reported: citizen submits
+    reported --> clustered: duplicate check
+    clustered --> ranked: priority score
+    ranked --> funded: allocation
+    funded --> in_progress: project or officer starts
+    in_progress --> resolved: work reported done
+    resolved --> verified: citizens confirm with evidence
+    resolved --> in_progress: citizens dispute (appeal)
+    reported --> rejected: spam or invalid
+    ranked --> rejected: GP or department rejects
+    verified --> [*]
+    rejected --> [*]
+```
 
 ### Roles
 
@@ -169,6 +334,20 @@ The AI service ([`services/ai`](services/ai)) is organised by capability: `class
 `deduplication`, `prioritization`, `statement_generation`, `matching`, `recommendation`,
 `speech`, `language`, `vision`, and `chat`.
 
+Duplicate detection runs as a cascade, cheapest check first, so the LLM only sees the few
+pairs that survive the spatial and vector filters:
+
+```mermaid
+flowchart LR
+    N["New demand"] --> G{"Another demand<br/>within 150 m?<br/>PostGIS"}
+    G -->|no| NEW["Start a new cluster"]
+    G -->|yes| V{"Similar meaning?<br/>pgvector cosine"}
+    V -->|no| NEW
+    V -->|yes| L{"Same physical thing?<br/>LLM adjudication"}
+    L -->|no| NEW
+    L -->|yes| M["Merge into the cluster<br/>demand weight + 1"]
+```
+
 ### Security and infrastructure layer
 
 | Component | Stack |
@@ -184,32 +363,96 @@ The AI service ([`services/ai`](services/ai)) is organised by capability: `class
 
 ## Architecture
 
+### System architecture
+
+```mermaid
+flowchart TB
+    subgraph clients["Clients"]
+        MOB["apps/mobile<br/>Flutter · offline-first<br/>citizens"]
+        WEB["apps/web<br/>Next.js 16<br/>public portal + role dashboards"]
+    end
+
+    FB["Firebase<br/>phone OTP · FCM push"]
+
+    subgraph run["Google Cloud Run"]
+        API["services/api<br/>FastAPI modular monolith<br/>OWNS THE SCHEMA"]
+        WRK["worker (ARQ)<br/>same image as the API"]
+        AIS["services/ai<br/>stateless · internal only"]
+    end
+
+    subgraph data["Data"]
+        PG[("PostgreSQL 16<br/>PostGIS · pgvector")]
+        RD[("Redis<br/>cache · queue · rate limits")]
+        R2[("Cloudflare R2<br/>photos · audio · evidence")]
+    end
+
+    subgraph models["Model providers"]
+        LLM["Gemini 2.5 Flash<br/>Vertex AI"]
+        EL["ElevenLabs<br/>speech · translation"]
+        GQ["Groq"]
+    end
+
+    MOB -->|"HTTPS + Firebase ID token"| API
+    WEB -->|"HTTPS + Firebase ID token"| API
+    clients -.->|"sign in"| FB
+    FB -.->|"push"| MOB
+    clients -->|"presigned upload"| R2
+    API --> PG
+    API -->|"enqueue"| RD
+    RD --> WRK
+    WRK --> PG
+    API -->|"HTTP · internal key"| AIS
+    WRK -->|"HTTP · internal key"| AIS
+    AIS --> LLM
+    AIS --> EL
+    WEB -.->|"AI Project Council<br/>ADR 0005"| GQ
 ```
-   ┌────────────────┐          ┌────────────────┐
-   │  apps/mobile   │          │   apps/web     │
-   │  Flutter       │          │   Next.js      │
-   │  citizens      │          │   role routes  │
-   └───────┬────────┘          └───────┬────────┘
-           │      HTTPS + Firebase ID token
-           └──────────────┬──────────────┘
-                          ▼
-              ┌───────────────────────┐        ┌──────────────────┐
-              │    services/api       │───────▶│   services/ai    │
-              │  FastAPI              │  HTTP  │  stateless       │
-              │  modular monolith     │◀───────│  internal only   │
-              │  OWNS THE SCHEMA      │        └──────────────────┘
-              └────┬─────────────┬────┘
-                   │             │ enqueue
-                   ▼             ▼
-        ┌──────────────────┐  ┌──────────────┐
-        │ Postgres 16      │  │ Redis        │
-        │ PostGIS pgvector │  │ cache+queue  │
-        └──────────────────┘  └──────┬───────┘
-                                     ▼
-                            ┌──────────────────┐
-                            │ worker (ARQ)     │
-                            │ SAME IMAGE as api│
-                            └──────────────────┘
+
+The line from the web app to Groq is the one documented exception to Invariant 3: the AI
+Project Council still runs in the web app's server routes.
+
+### Inside the API
+
+One deployable, split into modules that only talk through each other's `service.py` and
+`schemas.py`, plus an in-process event bus.
+
+```mermaid
+flowchart LR
+    subgraph intake["Civic intake"]
+        problems
+        feedback
+        geography
+        maps
+    end
+    subgraph pipeline["Problem pipeline"]
+        problem_statements
+        departments
+        funding
+        impact
+    end
+    subgraph talent["Academia and industry"]
+        academics
+        teams
+        projects
+        buildfolio
+        industry
+        leaderboard
+    end
+    subgraph platform["Platform"]
+        auth
+        rbac
+        users
+        audit
+        notifications
+        files
+        analytics
+    end
+    BUS{{"In-process domain event bus"}}
+
+    intake <--> BUS
+    pipeline <--> BUS
+    talent <--> BUS
+    platform <--> BUS
 ```
 
 ### Invariants
