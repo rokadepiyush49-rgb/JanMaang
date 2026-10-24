@@ -4,7 +4,7 @@
   "description": "Civic demand-to-budget platform \u2014 monorepo root (TypeScript workspace).",
   "packageManager": "pnpm@9.12.0",
   "engines": {
-    "node": ">=20.11"
+    "node": ">=22.12"
   },
   "scripts": {
     "lint": "pnpm -r lint",

@@ -692,7 +692,7 @@ three, so there is one command interface to learn.
 ### Prerequisites
 
 - Docker + Docker Compose
-- Node.js ≥ 20.11 and pnpm 9
+- Node.js ≥ 22.12 (see `.nvmrc`) and pnpm 9
 - Python 3.12 and [uv](https://github.com/astral-sh/uv)
 - Flutter SDK (for the citizen app)
 

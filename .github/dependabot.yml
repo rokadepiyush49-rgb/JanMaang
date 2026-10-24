@@ -47,7 +47,7 @@ updates:
       mobile:
         patterns: ["*"]
 
-  # Base images. A stale python:3.12-slim or node:20-alpine is the most common
+  # Base images. A stale python:3.12-slim or node:22-alpine is the most common
   # way an image picks up a known CVE without any code changing.
   - package-ecosystem: docker
     directories: ["/apps/web", "/services/api", "/services/ai", "/infrastructure/docker/postgres"]

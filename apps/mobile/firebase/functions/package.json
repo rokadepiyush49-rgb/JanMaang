@@ -1,7 +1,7 @@
 {
   "name": "janmaang-functions",
   "description": "Server-side logic for JanMaang. Holds every secret the app relies on.",
-  "engines": { "node": "20" },
+  "engines": { "node": "22" },
   "main": "lib/index.js",
   "scripts": {
     "build": "tsc",
