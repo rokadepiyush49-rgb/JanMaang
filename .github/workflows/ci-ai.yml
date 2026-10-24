@@ -15,7 +15,7 @@ jobs:
   quality:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-python-service
         with: { service: services/ai }
       - working-directory: services/ai
@@ -31,7 +31,7 @@ jobs:
       INTERNAL_API_KEY: ci-only-internal-key
       LLM_API_KEY: ""
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-python-service
         with: { service: services/ai }
       - working-directory: services/ai
