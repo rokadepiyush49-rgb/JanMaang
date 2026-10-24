@@ -1,0 +1,9 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "JanMaang API",
+    "description": "Civic demand-to-budget platform. A citizen reports a local need; AI structures it; identical reports cluster; the cluster is ranked, funded, executed and citizen-verified.",
+    "version": "0.1.0"
+  },
+  "paths": {}
+}

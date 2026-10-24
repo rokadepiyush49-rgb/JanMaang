@@ -18,8 +18,9 @@ docker compose exec -T api python -c \
   > "$OUT"
 
 echo "→ generating TypeScript client"
-pnpm --filter @janmaang/contracts exec openapi-typescript "$OUT" \
-  -o packages/contracts/src/generated/api.ts
+# `pnpm --filter … exec` runs inside packages/contracts: paths are relative to it.
+pnpm --filter @janmaang/contracts exec openapi-typescript openapi/openapi.json \
+  -o src/generated/api.ts
 
 echo "→ generating Dart models"
 # TODO(contracts): openapi-generator dart-dio, or a small script into

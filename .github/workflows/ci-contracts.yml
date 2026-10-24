@@ -30,17 +30,21 @@ jobs:
             > ../../packages/contracts/openapi/openapi.json
 
       - name: Regenerate the TypeScript client
+        # `pnpm --filter … exec` runs inside packages/contracts, so the paths
+        # are relative to that package, not to the repo root.
         run: |
           mkdir -p packages/contracts/src/generated
           pnpm --filter @janmaang/contracts exec openapi-typescript \
-            packages/contracts/openapi/openapi.json \
-            -o packages/contracts/src/generated/api.ts
+            openapi/openapi.json \
+            -o src/generated/api.ts
 
       - name: Fail if the committed output is stale
+        # `git status`, not `git diff`: diff ignores untracked files, so a
+        # generated file that was never committed would slip through.
         run: |
-          if ! git diff --quiet -- packages/contracts; then
+          if [ -n "$(git status --porcelain -- packages/contracts)" ]; then
             echo "::error::Generated contracts are out of date. Run 'make contracts' and commit the result."
-            git diff --stat -- packages/contracts
+            git status --short -- packages/contracts
             exit 1
           fi
           echo "Contracts are current."
