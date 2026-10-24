@@ -32,10 +32,14 @@ after(async () => {
   await env?.cleanup();
 });
 
-beforeEach(async () => {
+// Wipe both emulators before EVERY test. This must be registered inside each
+// describe: node:test runs a top-level beforeEach once per suite, not once
+// per test, which let state leak between tests and made some "refuses"
+// cases hit a leftover document instead of the rule under test.
+async function reset() {
   await env.clearFirestore();
   await env.clearStorage();
-});
+}
 
 const as = (uid, claims = {}) => env.authenticatedContext(uid, claims);
 const anon = () => env.unauthenticatedContext();
@@ -55,6 +59,8 @@ async function seed(path, data) {
 }
 
 describe("firestore: demands", () => {
+  beforeEach(reset);
+
   it("lets a signed-in citizen file a well-formed demand", async () => {
     await assertSucceeds(
       setDoc(doc(as("alice").firestore(), "demands/d1"), newDemand("alice")),
@@ -132,6 +138,8 @@ describe("firestore: demands", () => {
 });
 
 describe("firestore: supporters", () => {
+  beforeEach(reset);
+
   it("lets a citizen back an existing demand as themselves", async () => {
     await seed("demands/d1", newDemand("alice"));
     await assertSucceeds(
@@ -154,6 +162,8 @@ describe("firestore: supporters", () => {
 });
 
 describe("firestore: server-only collections", () => {
+  beforeEach(reset);
+
   for (const path of [
     "verifications/v1",
     "clusters/c1",
@@ -173,6 +183,8 @@ describe("firestore: server-only collections", () => {
 });
 
 describe("firestore: users", () => {
+  beforeEach(reset);
+
   it("refuses self-granting the field-officer flag or trust level", async () => {
     const db = as("alice").firestore();
     await assertFails(setDoc(doc(db, "users/alice"), { uid: "alice", isFieldOfficer: true }));
@@ -195,6 +207,8 @@ async function seedFile(path) {
 }
 
 describe("storage: evidence photos", () => {
+  beforeEach(reset);
+
   it("lets a citizen upload a photo to their own report folder", async () => {
     await assertSucceeds(uploadBytes(ref(as("alice").storage(), "reports/alice/d1/a.jpg"), JPEG, jpeg));
   });

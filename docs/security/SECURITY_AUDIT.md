@@ -97,10 +97,10 @@ changed, verification could not run here (see SECURITY_TEST_PLAN.md);
 | S-01 | Critical | Passwordless "demo" sign-in for every role, Super Admin included, active in production builds; one shared password published in the README | web auth | Fixed |
 | S-02 | Critical | `next@16.3.4`: two unauthenticated RCE advisories (Image Optimization API, `use cache`), plus SSRF and a Server Actions DoS | web deps | Fixed |
 | S-03 | Critical | `submitVerification`: any signed-in account could close or reopen any in-progress demand; `kind: 'field'` never checked the officer claim | Cloud Functions | Fixed, partly verified |
-| S-04 | High | Storage: any signed-in user could overwrite or delete anyone's verification photo; `image/svg+xml` accepted and served publicly | storage.rules | Fixed; emulator-tested in CI (overwrite case tightened, re-run pending) |
+| S-04 | High | Storage: any signed-in user could overwrite or delete anyone's verification photo; `image/svg+xml` accepted and served publicly | storage.rules | Fixed; emulator tests in CI (isolated re-run pending) |
 | S-05 | High | `/api/council/{turn,verdict,speech}` open to the internet: spends the Groq key, free TTS proxy | web API | Fixed |
 | S-06 | High | Open redirects: proxy accepted `?next=//evil`, login action accepted `?next=/\evil` | web auth | Fixed |
-| S-07 | High | Firestore: demand creation could set `supporterCount`, `scoreBreakdown`, `totalRanked`, `code`; reporter could rewrite `reporterId`; supporters on non-existent demands | firestore.rules | Fixed; emulator-tested in CI |
+| S-07 | High | Firestore: demand creation could set `supporterCount`, `scoreBreakdown`, `totalRanked`, `code`; reporter could rewrite `reporterId`; supporters on non-existent demands | firestore.rules | Fixed; emulator tests in CI (isolated re-run pending) |
 | S-08 | High | Placeholder secrets from `.env.example` accepted in production (web `AUTH_SECRET`, API `AUTH_SECRET`/`AI_SERVICE_KEY`, AI `INTERNAL_API_KEY`) → forgeable sessions | web, api, ai config | Fixed |
 | S-09 | High | `pyjwt` 2.13 (12 advisories; it verifies every future API token), `urllib3`, `certifi`, `opentelemetry-api` | api, ai deps | Fixed |
 | S-10 | High | Unused runtime deps with advisories shipped: `maplibre-gl` (critical XSS), `firebase` (grpc), `zod` | web deps | Fixed (removed) |
