@@ -14,7 +14,7 @@ import {
   initializeTestEnvironment,
 } from "@firebase/rules-unit-testing";
 import { doc, getDoc, setDoc, updateDoc } from "firebase/firestore";
-import { deleteObject, ref, uploadBytes } from "firebase/storage";
+import { deleteObject, listAll, ref, uploadBytes } from "firebase/storage";
 
 const rules = (file) => readFileSync(new URL(`../${file}`, import.meta.url), "utf8");
 
@@ -38,7 +38,18 @@ after(async () => {
 // cases hit a leftover document instead of the rule under test.
 async function reset() {
   await env.clearFirestore();
-  await env.clearStorage();
+  // Not env.clearStorage(): it deletes only top-level files and never
+  // descends into folders, and every evidence path here is nested
+  // (reports/{uid}/…, verifications/{uid}/…), so it cleared nothing.
+  await env.withSecurityRulesDisabled((ctx) => deleteTree(ref(ctx.storage())));
+}
+
+async function deleteTree(folder) {
+  const { items, prefixes } = await listAll(folder);
+  await Promise.all([
+    ...items.map((item) => deleteObject(item)),
+    ...prefixes.map((prefix) => deleteTree(prefix)),
+  ]);
 }
 
 const as = (uid, claims = {}) => env.authenticatedContext(uid, claims);
