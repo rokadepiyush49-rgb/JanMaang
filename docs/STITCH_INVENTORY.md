@@ -125,3 +125,106 @@ primary UI. Cards 12px, buttons/inputs 8px, chips/badges 4px. Circles only for a
 - Empty: dashed-outline photo dropzone ("Tap to Capture Evidence").
 - Error: `error-container` / `on-error-container` severity badge.
 - Active/selected: filled icon + `primary-container` pill.
+
+---
+
+# CivicBridge Command Portal (Phase 2 — government web)
+
+Source: Stitch export `stitch_civicbridge_command_portal.zip`, design system **Civic Command**
+(`civic_command/DESIGN.md`). A separate Stitch project from the citizen app above: desktop,
+administrative, and built around a district command rail rather than a mobile bottom nav.
+
+The export is a **Maharashtra / Pune** district portal. The *structure* is what was adopted —
+layout, panel hierarchy, density, the quad-helix pipeline — while every place name, institution
+and figure was rewritten for Jharkhand, because a Ranchi officer reading Pune taluka names would
+rightly ignore the screen. See `apps/web/src/features/gov/data.ts` for the shared vocabulary.
+
+## Screen mapping
+
+| # | Stitch screen | Web route | Notes |
+|---|---|---|---|
+| 1 | CivicBridge Command Dashboard | `/department` | 6 KPI tiles, quad-helix pipeline strip, priority grievance table, live officer triage docket, cluster strip |
+| 2 | AI Problem Clusters & Geo Intelligence | `/department/clusters` | Beacon map, actionable-cluster rail with partner/sponsor matching, hotspot blocks, CSR pot |
+| 3 | Problem #P-1024 Detail & Evidence | `/department/problems/[id]` | Field evidence, voice intelligence (Hindi original + English synthesis), GIS radar, AI synthesis, academic + industry partners, sanction desk |
+| 4 | Project Tracking & Resolution Lifecycle | `/department/projects` | 8-stage lifecycle track, live telemetry chart, tranche approval, other active projects |
+| 5 | Analytics & Ecosystem Intelligence | `/department/analytics` | Category donut, AI funnel, SLA severity matrix, block efficiency, university leaderboard, CSR allocation |
+| — | (derived) | `/department/problems` | Full register; the reference only ever shows the table embedded in screen 1 |
+
+## Gram Panchayat portal (derived)
+
+Not in the export. The reference is district-scale throughout, and a ward secretary has neither
+the powers nor the numbers of a district officer, so `/panchayat` reuses the same components at
+village scale with the panchayat's own verbs — **verify** and **escalate**, never *sanction*.
+
+| Route | Purpose |
+|---|---|
+| `/panchayat` | Ward KPIs, verification queue preview, ward load, fund position, Gram Sabha calendar |
+| `/panchayat/demands` | Full demand register across all lifecycle stages |
+| `/panchayat/verify` | Stage 3 of the lifecycle — the panchayat's whole statutory job: a checklist and two outcomes per demand |
+| `/panchayat/works` | Sanctioned works, stage rail, fund flow released against each |
+
+## Design-token divergence
+
+`civic_command/DESIGN.md` ships its own Material-style palette (navy `#0F2042`, teal `#0D9488`,
+emerald `#10B981`, slate neutrals). It was **not** imported. `@janmaang/tokens` is generated from
+one JSON source shared with the Flutter app, and forking a second palette into the web build
+would break the guarantee that the map legend and wordmark are the same colours on both. The
+reference's roles map onto existing tokens closely enough:
+
+| Civic Command role | JanMaang token |
+|---|---|
+| Primary navy `#0F2042` | `--color-navy` / `--color-primary` |
+| Resolution emerald `#10B981` | `--color-impact` |
+| High severity `#DC2626` | `--color-danger` |
+| Medium severity `#D97706` | `--color-community` |
+| Divider `#E2E8F0` | `--color-line` |
+
+What *was* taken verbatim: tabular numerics on every figure, uppercase micro-labels above large
+readouts, hairline rules over shadows, and strictly rectangular status chips (4px, never pills).
+Those live in `apps/web/src/features/gov/components.tsx`, deliberately separate from the roomier
+citizen/student kit in `src/components/ui.tsx`.
+
+---
+
+# Industry Collaboration Portal (Phase 2 — industry/CSR web)
+
+Source: Stitch export `stitch_remix_of_remix_of_janmaang_industry_collaboration_portal.zip`. A
+remix of the Command Portal above, so it inherits the same density and panel hierarchy and is
+built with the same `features/gov/components.tsx` kit — but from the sponsor's chair rather than
+the sanction desk.
+
+Same transposition rule as the Command Portal: the export is a **Maharashtra / Pune** portal
+whose partner is "AquaTech Solutions" and whose lab is MPKV Rahuri. The structure carried over
+verbatim; the partner became **Usha Martin Ltd.** and the lab **BIT Mesra**, because those are
+already who `/department` names as the sponsor and cohort on P-1024 / PRJ-204. Where a screen
+shows that docket, the record is imported from `features/gov` rather than restated — the two
+portals must not disagree about a real sanction order.
+
+## Screen mapping
+
+| # | Stitch view | Web route | Notes |
+|---|---|---|---|
+| 1 | Dashboard | `/industry` | Partner banner + CSR pool, five-link civic chain with "you are here", 6 KPI tiles, top-AI-match hero with confidence breakdown, ranked opportunity queue |
+| 2 | Discover Projects | `/industry/discover` | Marketplace cards — severity, verification, match meter, citizens impacted, funding gap |
+| 3 | Project Detail | `/industry/projects/[id]` | Government rationale, assigned cohort, audit chain, stakeholder alignment, and the proposal builder |
+| 4 | Active Workspace | `/industry/workspace` | Contract milestone rail, live sensor stream table, field update thread, tranche position, field-pass request |
+| 5 | University Labs | `/industry/universities` → `/industry/labs` | Institution cards with cohort size, rating, sponsorship state |
+| 6 | Monitoring & Tracking | `/industry/monitoring` | Delivery tracker across all cohorts (including other firms' sponsorships), plus the PRJ-204 milestone/deliverable dossier |
+| 7 | CSR Compliance & ESG | `/industry/impact` | FY26 ledger — domain donut, tranche release curve, partner performance, compliance artefacts |
+
+## What changed from the reference
+
+- **The proposal modal became a panel.** The reference opens a modal from any screen and fires a
+  toast. Modals are the wrong shape for a docket a compliance officer may need to re-read, so the
+  builder lives inline on the project it belongs to and every "express interest" link deep-links
+  to it. It is the segment's only client component; everything else renders on the server.
+- **The support options are priced from the project.** The reference hard-codes "₹3.5L" into the
+  option list. Here the grant line is worth whatever gap the cohort actually filed, so one list
+  serves all 28 dockets and the "short by" line is arithmetic rather than copy.
+- **Non-sponsored projects are shown, marked.** The reference tracker lists only the partner's own
+  projects. A sponsor who cannot see that a neighbouring block is stalled on hardware they stock
+  never gets the introduction the platform exists to make.
+- **Two money figures, kept apart.** `/department` analytics attributes ₹3.2 Cr of CSR to Usha
+  Martin. That is the group's whole Jharkhand outlay; the ₹20.0 L on these screens is the FY26
+  slice routed through JanMaang. The ledger says so explicitly rather than letting the two read
+  as the same number.
