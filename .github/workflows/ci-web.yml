@@ -2,10 +2,12 @@ name: CI · web
 
 on:
   pull_request:
-    paths: ["apps/web/**", "packages/**", "package.json", "pnpm-lock.yaml", ".github/workflows/ci-web.yml"]
+    # permissions.py is read by apps/web's admin.test.ts, which fails if the web
+    # copy of the role matrix drifts from the API's.
+    paths: ["apps/web/**", "packages/**", "package.json", "pnpm-lock.yaml", ".github/workflows/ci-web.yml", "services/api/app/core/permissions.py"]
   push:
     branches: [main]
-    paths: ["apps/web/**", "packages/**"]
+    paths: ["apps/web/**", "packages/**", "services/api/app/core/permissions.py"]
 
 concurrency:
   group: ci-web-${{ github.ref }}

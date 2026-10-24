@@ -47,6 +47,10 @@ jobs:
           file: ${{ matrix.dockerfile }}
           target: production
           push: true
+          # Only the commit, which is identical in staging and production.
+          # Images carry no environment settings — see apps/web/Dockerfile.
+          build-args: |
+            GIT_SHA=${{ github.sha }}
           tags: |
             ghcr.io/${{ steps.img.outputs.repo }}/${{ matrix.name }}:staging
             ghcr.io/${{ steps.img.outputs.repo }}/${{ matrix.name }}:${{ github.sha }}
@@ -65,4 +69,4 @@ jobs:
           echo "Runtime secrets come from the platform's secret manager — CI holds"
           echo "deploy credentials only and never sees LLM_API_KEY."
       - name: Smoke test
-        run: bash infrastructure/scripts/smoke-test.sh "${{ vars.STAGING_URL }}"
+        run: bash infrastructure/scripts/smoke-test.sh "${{ vars.STAGING_URL }}" "${{ vars.STAGING_WEB_URL || vars.STAGING_URL }}"

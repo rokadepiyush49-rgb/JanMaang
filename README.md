@@ -284,6 +284,117 @@ checked separately. Full matrix: [docs/product/roles.md](docs/product/roles.md).
 
 ---
 
+## Web Dashboards
+
+One Next.js app serves every web role. After sign-in, the role proxy
+([`apps/web/src/proxy.ts`](apps/web/src/proxy.ts)) sends each role to its own route segment,
+and each segment has its own sidebar. Status and plan:
+[docs/product/dashboards.md](docs/product/dashboards.md).
+
+| Side | Route | Screens |
+|---|---|---|
+| **Student** | `/student` | Home · Problem Explorer · AI Project Council · Impact Hub · Industry Hub · Profile · Collaborate wizard |
+| **Industry / CSR** | `/industry` | Home · Discover · Workspace · Labs · Monitoring · Impact · Project detail + proposal builder |
+| **Government · Gram Panchayat** | `/panchayat` | Home · Demand Register · Verification Queue · Sanctioned Works |
+| **Government · Department** | `/department` | District Command · Problem Reports · Docket · AI Clusters · Projects · Analytics |
+| **Government · Officer** | `/officer` | Field Desk · Assigned Works · Work docket + field update · Site Visits |
+| **Government · State Admin** | `/admin` | State Command · Districts · Funding & Sanctions · Audit Log · Users & Roles |
+
+```mermaid
+flowchart LR
+    V(["Visitor"]) --> L["/login"]
+    L --> P{"Role proxy<br/>signed session cookie"}
+
+    P -->|student| ST
+    P -->|industry| IN
+    P -->|panchayat| GP
+    P -->|department| DP
+    P -->|officer| OF
+    P -->|gov_admin · super_admin| AD
+
+    subgraph student["Student side"]
+        ST["/student<br/>explore · council · collaborate"]
+    end
+    subgraph industry["Industry side"]
+        IN["/industry<br/>discover · fund · monitor"]
+    end
+    subgraph gov["Government side"]
+        GP["/panchayat<br/>verify · escalate"]
+        DP["/department<br/>triage · sanction · track"]
+        OF["/officer<br/>execute · report"]
+        AD["/admin<br/>oversee · approve · audit"]
+    end
+
+    GP -. "verified demand" .-> DP
+    DP -. "sanctioned work" .-> OF
+    DP -. "above ₹25 L" .-> AD
+    DP -. "problem statement" .-> ST
+    DP -. "sponsorship ask" .-> IN
+```
+
+The proxy only shapes navigation. Every read and write is authorised again by the API.
+
+### One work across every dashboard
+
+The same record, W-2041 in the demo data, appears on every dashboard below. Each
+dashboard can do only its own step to it.
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor C as Citizens
+    participant GP as /panchayat
+    participant DP as /department
+    participant AD as /admin
+    participant IN as /industry
+    participant ST as /student
+    participant OF as /officer
+    participant AU as Audit log
+
+    C->>GP: 47 reports merged into one demand
+    GP->>GP: Ground check · photo · GPS · ward signature
+    GP->>DP: Verified, escalated (stage 3 → 4)
+    DP->>DP: Triage, AI cluster, sanction order
+    opt Sanction above the ₹25 L district ceiling
+        DP->>AD: Request state approval
+        AD-->>DP: Approved
+    end
+    DP->>ST: Problem statement to a matched cohort
+    DP->>IN: Sponsorship gap
+    IN-->>DP: CSR pledge
+    DP->>OF: Work released for field execution (stage 7)
+    loop Weekly
+        OF->>OF: Site visit · on-site checklist
+        OF->>DP: Geo-tagged field update
+        DP->>OF: Next tranche on witnessed milestone
+    end
+    OF->>C: OTP sign-off request (stage 8)
+    C-->>OF: Confirmed fixed
+    Note over GP,AU: Every step above is signed and written to the hash-chained audit log
+    AU-->>AD: Flags: off-site GPS · release before milestone
+```
+
+### Try it
+
+Run `make dev`, open <http://localhost:3000/login>, and sign in as any persona. The
+password for every persona is `janmaang`.
+
+| Persona | Email | Lands on |
+|---|---|---|
+| Student | `aisha@student.janmaang.in` | `/student` |
+| Industry / CSR | `csr@industry.janmaang.in` | `/industry` |
+| Gram Panchayat | `sunita@panchayat.janmaang.in` | `/panchayat` |
+| Department | `phed@dept.janmaang.in` | `/department` |
+| Officer | `anand@officer.janmaang.in` | `/officer` |
+| Government Admin | `meera@gov.janmaang.in` | `/admin` |
+| Super Admin | `admin@janmaang.in` | `/admin`, and can switch into every view |
+
+These personas come from [`apps/web/src/lib/auth/directory.ts`](apps/web/src/lib/auth/directory.ts),
+a stand-in until the API's auth module lands. **Never deploy it anywhere reachable from
+the internet.**
+
+---
+
 ## Technical Approach
 
 ### Client layer
@@ -356,8 +467,8 @@ flowchart LR
 | Authorization | RBAC in PostgreSQL · single authority, hierarchical roles, fine-grained permissions |
 | Secrets | GCP Secret Manager / `.env` · injected at runtime, scanned by gitleaks in pre-commit and CI |
 | Containerization | Docker (OCI) · multi-stage Dockerfiles for the API, the worker, and standalone Next.js |
-| Orchestration | Google Cloud Run · scale-to-zero serverless containers |
-| CI/CD | GitHub Actions · build, test, push to Artifact Registry, OpenAPI diff, automated Cloud Run deploy, signed demo APK builds |
+| Orchestration | Google Cloud Run · scale-to-zero serverless containers · Kustomize manifests ready for Kubernetes ([infrastructure/kubernetes](infrastructure/kubernetes/README.md)) |
+| CI/CD | GitHub Actions · path-filtered CI per service, images pushed to GHCR, auto-deploy to staging, approval-gated promotion to production, smoke test + rollback · Dependabot |
 
 ---
 
@@ -369,12 +480,14 @@ flowchart LR
 flowchart TB
     subgraph clients["Clients"]
         MOB["apps/mobile<br/>Flutter · offline-first<br/>citizens"]
-        WEB["apps/web<br/>Next.js 16<br/>public portal + role dashboards"]
+        BRW["Browser<br/>public portal +<br/>role dashboards"]
     end
 
     FB["Firebase<br/>phone OTP · FCM push"]
+    EDGE["Edge · HTTPS load balancer / Ingress<br/>one host · TLS<br/>/api/v1 → api · everything else → web"]
 
-    subgraph run["Google Cloud Run"]
+    subgraph run["Runtime · Cloud Run today · Kubernetes manifests ready"]
+        WEB["apps/web<br/>Next.js 16 standalone<br/>role proxy · server components"]
         API["services/api<br/>FastAPI modular monolith<br/>OWNS THE SCHEMA"]
         WRK["worker (ARQ)<br/>same image as the API"]
         AIS["services/ai<br/>stateless · internal only"]
@@ -392,8 +505,11 @@ flowchart TB
         GQ["Groq"]
     end
 
-    MOB -->|"HTTPS + Firebase ID token"| API
-    WEB -->|"HTTPS + Firebase ID token"| API
+    MOB -->|"HTTPS + Firebase ID token"| EDGE
+    BRW -->|"HTTPS"| EDGE
+    EDGE -->|"/"| WEB
+    EDGE -->|"/api/v1"| API
+    WEB -->|"server-side fetch"| API
     clients -.->|"sign in"| FB
     FB -.->|"push"| MOB
     clients -->|"presigned upload"| R2
@@ -479,12 +595,72 @@ See [ARCHITECTURE.md](ARCHITECTURE.md) for how modules can be extracted later wi
 
 ---
 
+## Deployment
+
+Three images (`web`, `api`, `ai`; the worker reuses `api`) are built once per commit and
+promoted, never rebuilt. Production runs the exact image staging tested.
+
+```mermaid
+flowchart LR
+    PR["Pull request"] --> CI
+    subgraph CI["CI · path-filtered per service"]
+        direction TB
+        CW["ci-web<br/>lint · typecheck · test · build"]
+        CA["ci-api · ci-ai<br/>ruff · mypy · pytest"]
+        CM["ci-mobile · ci-contracts · e2e<br/>flutter test · OpenAPI diff · Playwright"]
+        CS["security<br/>gitleaks · CodeQL · audit"]
+    end
+    CI -->|"squash-merge to main"| IMG["Build images<br/>web · api · ai"]
+    IMG --> REG[("GHCR<br/>:sha · :staging")]
+    REG --> STG["Staging<br/>auto-deploy"]
+    STG --> SM1{"Smoke test<br/>api + web"}
+    SM1 -->|"pass"| GATE{{"Manual approval<br/>production environment"}}
+    GATE --> TAG["Retag :sha → :production<br/>no rebuild"]
+    TAG --> BK["Back up database"] --> MIG["alembic upgrade head"] --> ROLL["Roll services"]
+    ROLL --> SM2{"Smoke test"}
+    SM2 -->|"fail"| RB["rollback.sh"]
+    SM2 -->|"pass"| LIVE(["Live"])
+```
+
+At runtime, one public host fronts everything. The AI service has no route from outside.
+
+```mermaid
+flowchart TB
+    U(["Citizens · officials · students"]) --> ING["Ingress / load balancer<br/>TLS · janmaang.in"]
+    ING -->|"/"| WEB["web Deployment<br/>HPA 2–6 · PDB"]
+    ING -->|"/api/v1 · /health"| API["api Deployment<br/>HPA 2–12 · PDB"]
+    WEB -->|"server-side"| API
+    API -->|"enqueue"| RD[("Redis<br/>managed")]
+    RD --> WRK["worker Deployment"]
+    API --> PG[("PostgreSQL 16<br/>PostGIS · pgvector<br/>managed")]
+    WRK --> PG
+    API --> AI["ai Deployment<br/>ClusterIP only"]
+    WRK --> AI
+    SM["Secret manager<br/>External Secrets"] -.->|"janmaang-web / -api / -ai"| WEB & API & AI
+    NP{{"NetworkPolicy<br/>ai ← api, worker only"}} -.- AI
+```
+
+Every pod runs as a non-root user with a read-only root filesystem, and both
+namespaces enforce the `restricted` Pod Security Standard. See
+[docs/deployment/environments.md](docs/deployment/environments.md) and
+[infrastructure/kubernetes/README.md](infrastructure/kubernetes/README.md).
+
+---
+
 ## Repository Layout
 
 ```
+.github/
+  workflows/       ci-web · ci-api · ci-ai · ci-mobile · ci-contracts · e2e · security
+                   · ai-evals · deploy-staging · deploy-production
+  actions/         shared composite actions (Python service setup)
+  ISSUE_TEMPLATE/  bug · feature · task
+  CODEOWNERS · dependabot.yml · pull_request_template.md
 apps/
   mobile/          Flutter citizen app (offline-first)
   web/             Next.js: public portal + role dashboards in one app
+    src/app/(app)/   student · industry · panchayat · department · officer · admin · …
+    src/features/    screen data and components, one folder per backend module
 services/
   api/             FastAPI modular monolith. Owns the schema.
                    modules: problems, problem_statements, projects, teams,
@@ -496,7 +672,11 @@ packages/
   tokens/          Design tokens → CSS variables + Dart constants
   ui/              React primitives (web only)
   config/          Shared lint / TS / Prettier presets
-infrastructure/    Docker, Terraform, Kubernetes, ops scripts
+infrastructure/
+  docker/          Postgres + PostGIS + pgvector image
+  kubernetes/      Kustomize base + staging / production overlays
+  terraform/       Planned; filled in at the first cloud deployment
+  scripts/         backup · restore · rollback · smoke-test
 docs/              Architecture, ADRs, database, AI, deployment, product
 scripts/           setup · doctor · contract generation
 tests/e2e/         Cross-service journeys
@@ -521,7 +701,7 @@ three, so there is one command interface to learn.
 ### Run it locally
 
 ```bash
-git clone https://github.com/rokadepiyush49-rgb/SIH-26.git janmaang
+git clone https://github.com/rokadepiyush49-rgb/JanMaang.git janmaang
 cd janmaang
 make setup     # tools, .env files, dependencies, database, seed data
 make dev       # postgres, redis, api, worker, ai, web
@@ -675,6 +855,9 @@ signal.
 | [docs/ai/evaluation.md](docs/ai/evaluation.md) | AI evals and golden datasets |
 | [docs/deployment/runbook.md](docs/deployment/runbook.md) | Deployment runbook |
 | [docs/product/roles.md](docs/product/roles.md) | Roles and permission matrix |
+| [docs/product/dashboards.md](docs/product/dashboards.md) | Every role dashboard: what is built, what is planned |
+| [docs/deployment/environments.md](docs/deployment/environments.md) | Staging vs production, smoke tests, rollback |
+| [infrastructure/kubernetes](infrastructure/kubernetes/README.md) | Kustomize manifests and what the cluster must provide |
 | [docs/product/glossary.md](docs/product/glossary.md) | Demand vs Cluster vs Problem Statement vs Project |
 | [docs/STITCH_INVENTORY.md](docs/STITCH_INVENTORY.md) | Screen-by-screen design mapping and token table |
 | [docs/SOURCES.md](docs/SOURCES.md) | Data provenance (rendered in-app at `/method`) |

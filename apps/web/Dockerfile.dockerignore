@@ -1,0 +1,33 @@
+# Ignore rules for apps/web/Dockerfile, whose build context is the REPO ROOT.
+#
+# Docker only reads a .dockerignore at the root of the context, so the old
+# apps/web/.dockerignore was never applied and `COPY . .` sent every .env file,
+# host node_modules and .git into the image. BuildKit reads a file named
+# <Dockerfile>.dockerignore next to the Dockerfile instead, which is this one.
+# Paths are relative to the repo root.
+
+# Secrets. Runtime values come from the platform's secret manager.
+**/.env
+**/.env.*
+!**/.env.example
+
+# Host-built artefacts: wrong platform for the image, and rebuilt inside it.
+**/node_modules
+**/.next
+**/.turbo
+**/*.tsbuildinfo
+**/coverage
+tests/e2e/test-results
+tests/e2e/playwright-report
+
+# Not part of the web build. tests/e2e stays because its package.json is a
+# workspace importer the frozen install expects.
+.git
+.github
+apps/mobile
+services
+infrastructure
+docs
+**/.DS_Store
+**/.venv
+**/__pycache__

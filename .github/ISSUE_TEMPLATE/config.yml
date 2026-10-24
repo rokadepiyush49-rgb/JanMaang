@@ -1,0 +1,6 @@
+# Every issue starts from a template, and security reports never start here.
+blank_issues_enabled: false
+contact_links:
+  - name: Security vulnerability
+    url: https://github.com/rokadepiyush49-rgb/JanMaang/security/advisories/new
+    about: Report privately. Never open a public issue for a vulnerability — see SECURITY.md.

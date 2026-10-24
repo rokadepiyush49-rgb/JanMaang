@@ -74,10 +74,10 @@ export const DEMO_USERS: readonly DirectoryUser[] = [
   },
   {
     userId: "u-industry-1",
-    name: "Tata Steel Foundation",
+    name: "Usha Martin Ltd.",
     email: "csr@industry.janmaang.in",
     role: "industry",
-    affiliation: "CSR partner · Jamshedpur",
+    affiliation: "R&D and CSR Division · Tatisilwai, Ranchi",
   },
   {
     userId: "u-gov-admin-1",

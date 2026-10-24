@@ -22,6 +22,21 @@ platform's secret manager at runtime.
 cannot be undone by redeploying the old image. Prefer additive migrations: add a
 column, backfill, drop in a later release.
 
+## Where it runs
+
+The same three images (`web`, `api`, `ai`) run on a managed container platform
+today and on Kubernetes when one of the adoption triggers in
+[`infrastructure/kubernetes/README.md`](../../infrastructure/kubernetes/README.md)
+is met. The Kustomize overlays there mirror the staging/production split in
+the table above.
+
+Every deploy ends with
+[`infrastructure/scripts/smoke-test.sh`](../../infrastructure/scripts/smoke-test.sh),
+which checks the API (`/health`, OpenAPI, an authorised endpoint refusing an
+anonymous caller) and the web app (`/api/health`, `/login`, and `/admin`
+redirecting an anonymous visitor). Set `STAGING_WEB_URL` / `PRODUCTION_WEB_URL`
+repository variables only if the web app is on a different host from the API.
+
 ## Rollback
 
 ```bash

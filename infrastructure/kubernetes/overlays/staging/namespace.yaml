@@ -1,0 +1,8 @@
+apiVersion: v1
+kind: Namespace
+metadata:
+  name: janmaang-staging
+  labels:
+    # Rejects any pod that runs as root or asks for privileges the base
+    # manifests do not, so a hand-applied debug pod cannot weaken the namespace.
+    pod-security.kubernetes.io/enforce: restricted

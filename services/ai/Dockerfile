@@ -15,10 +15,11 @@ COPY --from=ghcr.io/astral-sh/uv:0.5.4 /uv /uvx /bin/
 WORKDIR /app
 
 FROM base AS deps
+# Frozen, with no fallback: re-resolving here would ship versions nobody
+# reviewed. CI runs `uv sync --locked`, so a stale uv.lock fails the PR first.
 COPY pyproject.toml uv.lock* ./
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-install-project --all-groups 2>/dev/null || \
-    uv sync --no-install-project --all-groups
+    uv sync --frozen --no-install-project --all-groups
 
 FROM deps AS development
 COPY . .
@@ -29,8 +30,7 @@ CMD ["uvicorn", "app.main:app", "--host", "0.0.0.0", "--port", "8001", "--reload
 FROM base AS production
 COPY pyproject.toml uv.lock* ./
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-install-project --no-dev 2>/dev/null || \
-    uv sync --no-install-project --no-dev
+    uv sync --frozen --no-install-project --no-dev
 COPY ./app ./app
 COPY ./prompts ./prompts
 RUN useradd --create-home --uid 10001 janmaang && chown -R janmaang:janmaang /app

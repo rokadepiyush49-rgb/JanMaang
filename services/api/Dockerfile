@@ -18,10 +18,11 @@ WORKDIR /app
 # Dependencies resolve in their own layer, so an application-code change does
 # not reinstall the world.
 FROM base AS deps
+# Frozen, with no fallback: re-resolving here would ship versions nobody
+# reviewed. CI runs `uv sync --locked`, so a stale uv.lock fails the PR first.
 COPY pyproject.toml uv.lock* ./
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-install-project --all-groups 2>/dev/null || \
-    uv sync --no-install-project --all-groups
+    uv sync --frozen --no-install-project --all-groups
 
 FROM deps AS development
 COPY . .
@@ -34,8 +35,7 @@ COPY --from=deps /app/.venv /app/.venv
 # Drop dev dependencies from the production image.
 COPY pyproject.toml uv.lock* ./
 RUN --mount=type=cache,target=/root/.cache/uv \
-    uv sync --frozen --no-install-project --no-dev 2>/dev/null || \
-    uv sync --no-install-project --no-dev
+    uv sync --frozen --no-install-project --no-dev
 COPY ./app ./app
 COPY ./seeds ./seeds
 COPY alembic.ini ./
