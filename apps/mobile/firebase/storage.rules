@@ -25,9 +25,16 @@ service firebase.storage {
           && request.resource.size < 8 * 1024 * 1024;
     }
 
+    // No object at this path yet. Stated explicitly rather than relied on
+    // from the create/update split: the emulator treated an overwrite by
+    // the owner as `create`, and evidence must never be replaced in place.
+    function isNewObject() {
+      return resource == null;
+    }
+
     match /reports/{uid}/{demandId}/{fileName} {
       allow read: if true;
-      allow create: if isOwner(uid) && isPhoto() && underSizeLimit();
+      allow create: if isOwner(uid) && isNewObject() && isPhoto() && underSizeLimit();
       allow delete: if isOwner(uid);
     }
 
@@ -36,7 +43,7 @@ service firebase.storage {
     // verification evidence. Now keyed by uploader, like reports.
     match /verifications/{uid}/{verificationId}/{fileName} {
       allow read: if true;
-      allow create: if isOwner(uid) && isPhoto() && underSizeLimit();
+      allow create: if isOwner(uid) && isNewObject() && isPhoto() && underSizeLimit();
       allow delete: if isOwner(uid);
     }
   }
