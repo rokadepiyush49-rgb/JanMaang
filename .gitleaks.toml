@@ -29,4 +29,7 @@ paths = [
 ]
 regexes = [
   '''(?i)(your|example|placeholder|changeme|xxx+|<[a-z-]+>)''',
+  # Edge Read Aloud's TrustedClientToken: a public constant shipped in Edge,
+  # used by apps/web/src/lib/council/edge-tts.ts. Not a credential.
+  '''6A5AA1D4EAFF4E9FB37E23D68491D6F4''',
 ]
