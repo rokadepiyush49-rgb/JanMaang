@@ -44,7 +44,7 @@ jobs:
         run: |
           echo "TODO(deploy): alembic upgrade head, then roll the services."
       - name: Smoke test
-        run: bash infrastructure/scripts/smoke-test.sh "${{ vars.PRODUCTION_URL }}"
+        run: bash infrastructure/scripts/smoke-test.sh "${{ vars.PRODUCTION_URL }}" "${{ vars.PRODUCTION_WEB_URL || vars.PRODUCTION_URL }}"
       - name: Roll back on failure
         if: failure()
         run: bash infrastructure/scripts/rollback.sh

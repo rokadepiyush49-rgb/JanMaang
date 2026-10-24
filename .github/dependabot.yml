@@ -1,0 +1,66 @@
+# Dependency updates, one entry per package manager in the monorepo.
+#
+# Grouped and weekly on purpose: seven people cannot review thirty single-bump
+# PRs a week, and an ignored Dependabot queue is worse than none. Security
+# advisories bypass the schedule and open immediately regardless.
+version: 2
+
+updates:
+  # TypeScript workspace: apps/web, packages/*, tests/e2e (one pnpm lockfile).
+  - package-ecosystem: npm
+    directory: /
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 5
+    labels: [dependencies, web]
+    groups:
+      next-react:
+        patterns: ["next", "react", "react-dom", "@types/react*"]
+      tooling:
+        patterns: ["eslint*", "prettier", "typescript", "vitest", "@vitest/*", "@playwright/*", "tailwindcss", "@tailwindcss/*"]
+      everything-else:
+        patterns: ["*"]
+
+  - package-ecosystem: uv
+    directory: /services/api
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 3
+    labels: [dependencies, api]
+    groups:
+      api:
+        patterns: ["*"]
+
+  - package-ecosystem: uv
+    directory: /services/ai
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 3
+    labels: [dependencies, ai]
+    groups:
+      ai:
+        patterns: ["*"]
+
+  - package-ecosystem: pub
+    directory: /apps/mobile
+    schedule: { interval: weekly, day: monday }
+    open-pull-requests-limit: 3
+    labels: [dependencies, mobile]
+    groups:
+      mobile:
+        patterns: ["*"]
+
+  # Base images. A stale python:3.12-slim or node:20-alpine is the most common
+  # way an image picks up a known CVE without any code changing.
+  - package-ecosystem: docker
+    directories: ["/apps/web", "/services/api", "/services/ai", "/infrastructure/docker/postgres"]
+    schedule: { interval: weekly, day: monday }
+    labels: [dependencies, infrastructure]
+    groups:
+      base-images:
+        patterns: ["*"]
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule: { interval: monthly }
+    labels: [dependencies, ci]
+    groups:
+      actions:
+        patterns: ["*"]

@@ -1,0 +1,24 @@
+# Non-secret runtime configuration, shared by every workload.
+#
+# Secrets are NOT here and never will be: a Secret manifest is base64, not
+# encryption. Each workload reads its secrets from a Secret named
+# `janmaang-<service>` that the cluster's secret manager (External Secrets
+# Operator or the CSI driver) creates from the cloud secret store:
+#
+#   janmaang-web     AUTH_SECRET, GROQ_API_KEY
+#   janmaang-api     DATABASE_URL, REDIS_URL, AUTH_SECRET, AI_SERVICE_KEY,
+#                    FIREBASE_CREDENTIALS_JSON, MAPS_API_KEY
+#   janmaang-ai      INTERNAL_API_KEY, LLM_API_KEY, REDIS_URL
+#
+# The key lists mirror each service's .env.example.
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: janmaang-config
+data:
+  ENVIRONMENT: development # overlays set staging / production
+  LOG_LEVEL: INFO
+  DEBUG: "false"
+  # Internal only. The AI service has no Ingress, and the NetworkPolicy admits
+  # traffic from the API and worker alone.
+  AI_SERVICE_URL: http://ai:8001

@@ -1,0 +1,36 @@
+# Staging: auto-deployed on merge to main (deploy-staging.yml).
+#   kubectl apply -k infrastructure/kubernetes/overlays/staging
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+namespace: janmaang-staging
+
+resources:
+  - namespace.yaml
+  - ../../base
+
+images:
+  - { name: janmaang-web, newName: ghcr.io/rokadepiyush49-rgb/janmaang/web, newTag: staging }
+  - { name: janmaang-api, newName: ghcr.io/rokadepiyush49-rgb/janmaang/api, newTag: staging }
+  - { name: janmaang-ai, newName: ghcr.io/rokadepiyush49-rgb/janmaang/ai, newTag: staging }
+
+patches:
+  - target: { kind: ConfigMap, name: janmaang-config }
+    patch: |-
+      - { op: replace, path: /data/ENVIRONMENT, value: staging }
+  # One replica each: staging verifies behaviour, not capacity.
+  - target: { kind: HorizontalPodAutoscaler }
+    patch: |-
+      - { op: replace, path: /spec/minReplicas, value: 1 }
+      - { op: replace, path: /spec/maxReplicas, value: 2 }
+  - target: { kind: Deployment, name: "web|api" }
+    patch: |-
+      - { op: replace, path: /spec/replicas, value: 1 }
+  # With one replica a minAvailable of 1 blocks every node drain.
+  - target: { kind: PodDisruptionBudget }
+    patch: |-
+      - { op: replace, path: /spec/minAvailable, value: 0 }
+  - target: { kind: Ingress, name: janmaang }
+    patch: |-
+      - { op: replace, path: /spec/tls/0/hosts/0, value: staging.janmaang.in }
+      - { op: replace, path: /spec/rules/0/host, value: staging.janmaang.in }

@@ -1,0 +1,22 @@
+# Environment-agnostic base. Overlays set the namespace, image tags, replica
+# floors, hostnames and ENVIRONMENT; nothing here names staging or production.
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+
+labels:
+  - pairs:
+      app.kubernetes.io/part-of: janmaang
+    includeSelectors: false
+
+resources:
+  - config.yaml
+  - web.yaml
+  - api.yaml
+  - worker.yaml
+  - ai.yaml
+  - ingress.yaml
+  - network-policy.yaml
+
+# No `images:` here. Workloads name placeholder images (janmaang-web, -api,
+# -ai) and each overlay maps them to a registry path and tag in one step; a
+# rename here would run first and leave the overlays nothing to match.

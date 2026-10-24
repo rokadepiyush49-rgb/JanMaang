@@ -1,0 +1,33 @@
+# One public host. /api/v1 and /health go to the API; everything else — pages,
+# and the web app's own /api/health and /api/council routes — goes to web.
+#
+# Same-origin on purpose: the browser calls /api/v1 on the host it loaded the
+# page from, so the web image carries no API URL and staging's image can be
+# promoted to production unchanged. Overlays set the host and TLS secret.
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+  name: janmaang
+  annotations:
+    nginx.ingress.kubernetes.io/proxy-body-size: 25m # citizen photo uploads
+spec:
+  ingressClassName: nginx
+  tls:
+    - hosts: [janmaang.example.invalid]
+      secretName: janmaang-tls
+  rules:
+    - host: janmaang.example.invalid
+      http:
+        paths:
+          - path: /api/v1
+            pathType: Prefix
+            backend:
+              service: { name: api, port: { name: http } }
+          - path: /health
+            pathType: Exact
+            backend:
+              service: { name: api, port: { name: http } }
+          - path: /
+            pathType: Prefix
+            backend:
+              service: { name: web, port: { name: http } }
