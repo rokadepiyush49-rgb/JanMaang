@@ -2,7 +2,8 @@
 
 import { redirect } from "next/navigation";
 
-import { authenticate, demoUserFor } from "./directory";
+import { authenticate, demoAuthEnabled, demoUserFor } from "./directory";
+import { safeRedirectPath } from "./redirect";
 import { ROLE_HOME, ROLES, type Role } from "./roles";
 import { clearSessionCookie, setSessionCookie } from "./session.server";
 import { newSession } from "./session";
@@ -11,11 +12,9 @@ export interface SignInState {
   error?: string;
 }
 
-/** Only ever redirect within this app — an open redirect here is a phishing gift. */
-function safeNext(value: FormDataEntryValue | null, fallback: string): string {
-  const next = typeof value === "string" ? value : "";
-  return next.startsWith("/") && !next.startsWith("//") ? next : fallback;
-}
+/** Longest email RFC 5321 allows; anything longer is not a sign-in attempt. */
+const MAX_EMAIL = 254;
+const MAX_PASSWORD = 1024;
 
 /**
  * Sign in with email and password.
@@ -34,6 +33,9 @@ export async function signIn(
   if (!email || !password) {
     return { error: "Enter your email and password." };
   }
+  if (email.length > MAX_EMAIL || password.length > MAX_PASSWORD) {
+    return { error: "That email and password do not match an account." };
+  }
 
   const user = await authenticate(email, password);
   // One message for a wrong address and a wrong password alike: saying which
@@ -43,7 +45,7 @@ export async function signIn(
   }
 
   await setSessionCookie(newSession(user));
-  redirect(safeNext(formData.get("next"), ROLE_HOME[user.role]));
+  redirect(safeRedirectPath(formData.get("next"), ROLE_HOME[user.role]));
 }
 
 /**
@@ -51,11 +53,16 @@ export async function signIn(
  *
  * Demo-only, and it goes when directory.ts does. It exists because reviewers
  * need to see nine roles in five minutes, not because it is a sound way in.
+ *
+ * A server action is a public POST endpoint whether or not the login page
+ * renders its button, so the gate is checked here, not only in the UI.
  */
 export async function signInAsDemo(
   _previous: SignInState,
   formData: FormData,
 ): Promise<SignInState> {
+  if (!demoAuthEnabled()) return { error: "Demo sign-in is disabled." };
+
   const role = String(formData.get("role") ?? "");
   if (!ROLES.includes(role as Role)) return { error: "Unknown role." };
 
@@ -63,7 +70,7 @@ export async function signInAsDemo(
   if (!user) return { error: "No demo account for that role yet." };
 
   await setSessionCookie(newSession(user));
-  redirect(safeNext(formData.get("next"), ROLE_HOME[user.role]));
+  redirect(safeRedirectPath(formData.get("next"), ROLE_HOME[user.role]));
 }
 
 export async function signOut(): Promise<void> {

@@ -35,8 +35,12 @@ async def get_current_principal(
     """Verify the bearer token and resolve it to a local user.
 
     TODO(auth): verify with firebase_admin.auth.verify_id_token, then look the
-    firebase_uid up in the users table. Until the auth module lands this raises,
-    so no endpoint can accidentally ship unauthenticated.
+    firebase_uid up in the users table. Until the auth module lands every
+    token is refused, so no endpoint can accidentally ship unauthenticated.
+
+    Refused with a 503 rather than by raising NotImplementedError: the outcome
+    is the same (fail closed), but the caller gets an honest status instead of
+    a crash, and the logs are not filled with a traceback per request.
     """
     if credentials is None:
         raise HTTPException(
@@ -44,4 +48,7 @@ async def get_current_principal(
             detail="Not authenticated",
             headers={"WWW-Authenticate": "Bearer"},
         )
-    raise NotImplementedError("Implement in app/modules/auth/service.py")
+    raise HTTPException(
+        status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+        detail="Authentication is not available yet",
+    )

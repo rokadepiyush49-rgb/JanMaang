@@ -32,6 +32,17 @@ service cloud.firestore {
       .affectedKeys().hasAny(serverOnlyFields().toSet());
   }
 
+  // Every server-only field except `status`, which a new demand must carry
+  // as 'reported'. Creation used to block only rank, priorityScore and
+  // clusterId, so a client could file a demand that already claimed
+  // supporterCount: 5000 or a fabricated scoreBreakdown.
+  function serverOnlyFieldsOnCreate() {
+    return [
+      'rank', 'totalRanked', 'priorityScore', 'scoreBreakdown',
+      'clusterId', 'supporterCount', 'code'
+    ];
+  }
+
   match /databases/{database}/documents {
 
     match /users/{uid} {
@@ -56,11 +67,13 @@ service cloud.firestore {
                     && request.resource.data.title is string
                     && request.resource.data.title.size() > 0
                     && request.resource.data.title.size() <= 200
-                    && !request.resource.data.keys().hasAny(['rank', 'priorityScore', 'clusterId']);
+                    && !request.resource.data.keys().hasAny(serverOnlyFieldsOnCreate());
 
       // A reporter may correct their own description; they may never move
-      // their demand's rank, status or cluster.
+      // their demand's rank, status or cluster, nor hand the demand to
+      // another account by rewriting reporterId.
       allow update: if isOwner(resource.data.reporterId)
+                    && request.resource.data.reporterId == resource.data.reporterId
                     && !touchesServerFields();
 
       allow delete: if false;
@@ -68,8 +81,11 @@ service cloud.firestore {
       match /supporters/{uid} {
         allow read: if true;
         // Joining is idempotent and self-authored; the supporter count is
-        // recomputed by a Function, not by the client.
-        allow create: if isOwner(uid);
+        // recomputed by a Function, not by the client. The demand must
+        // exist: backing one also grants the right to verify it (see
+        // functions/src/submitVerification.ts), so orphans are refused.
+        allow create: if isOwner(uid)
+                      && exists(/databases/$(database)/documents/demands/$(demandId));
         allow update, delete: if false;
       }
 

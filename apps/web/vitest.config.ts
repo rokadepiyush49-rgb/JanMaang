@@ -10,6 +10,13 @@ export default defineConfig({
     include: ["src/**/*.test.{ts,tsx}"],
   },
   resolve: {
-    alias: { "@": fileURLToPath(new URL("./src", import.meta.url)) },
+    alias: {
+      "@": fileURLToPath(new URL("./src", import.meta.url)),
+      // Same stub the scripts use: the real package throws outside a bundler,
+      // and the security tests need to import server-only modules directly.
+      "server-only": fileURLToPath(
+        new URL("./scripts/stubs/server-only.ts", import.meta.url),
+      ),
+    },
   },
 });

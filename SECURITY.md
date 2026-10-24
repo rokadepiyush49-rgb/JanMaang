@@ -10,6 +10,15 @@ Do **not** open a public issue. Email the maintainers, or open a
 Include what you found, how to reproduce it, and what it exposes. Expect an
 acknowledgement within 72 hours.
 
+## Audit, fixes and deployment
+
+| Document | What it holds |
+|---|---|
+| [docs/security/SECURITY_AUDIT.md](docs/security/SECURITY_AUDIT.md) | Findings, severity, status, permission matrix, architecture |
+| [docs/security/SECURITY_IMPLEMENTATION.md](docs/security/SECURITY_IMPLEMENTATION.md) | Controls implemented, files changed, design decisions |
+| [docs/security/SECURITY_TEST_PLAN.md](docs/security/SECURITY_TEST_PLAN.md) | Every security test, how to run it, latest result |
+| [docs/security/PRODUCTION_DEPLOYMENT_CHECKLIST.md](docs/security/PRODUCTION_DEPLOYMENT_CHECKLIST.md) | Manual steps before and after a production deploy |
+
 ## The rule
 
 **No client ships a server-side credential.** Anything extractable from an APK or

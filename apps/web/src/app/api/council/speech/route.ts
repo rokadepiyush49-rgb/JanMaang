@@ -11,15 +11,15 @@
  * a broken one. That is why the client must not treat a non-OK response as
  * something to surface to the student.
  *
- * ## No auth, and what that costs
+ * ## Access
  *
- * The rest of this app has no auth to hang this off, so this endpoint is
- * open. That makes it free synthesis for anyone who finds it, bounded only by
- * `MAX_CHARS` and by the upstream service. Acceptable for a demo deployment;
- * if this app ever grows a session or a user, gate this route on it.
+ * Gated like the other council routes (`lib/council/guard.ts`): a signed-in
+ * student-hub session, same-origin, and a per-user rate limit. Before the app
+ * had sessions this was open, which made it free synthesis for anyone.
  */
 
 import { NextResponse } from "next/server";
+import { guardCouncilRequest, readJsonBody } from "@/lib/council/guard";
 import { EdgeTtsError, synthesise } from "@/lib/council/edge-tts";
 import { isKnownVoice } from "@/lib/council/voices";
 import type { ApiError } from "@/lib/council/types";
@@ -37,12 +37,16 @@ export const maxDuration = 30;
 const MAX_CHARS = 1_200;
 
 export async function POST(request: Request) {
-  const body = (await request.json().catch(() => ({}))) as {
+  const guard = await guardCouncilRequest(request, "speech");
+  if ("response" in guard) return guard.response;
+
+  const body = ((await readJsonBody(request, "speech")) ?? {}) as {
     agentId?: unknown;
     text?: unknown;
   };
 
-  const text = typeof body.text === "string" ? body.text.trim().slice(0, MAX_CHARS) : "";
+  const text =
+    typeof body.text === "string" ? body.text.trim().slice(0, MAX_CHARS) : "";
   const agentId = typeof body.agentId === "string" ? body.agentId.trim() : "";
 
   if (!text) {
@@ -74,11 +78,13 @@ export async function POST(request: Request) {
     // 503 rather than 500: this is "the upgrade is unavailable, use the
     // fallback", not "something is broken".
     const status = error instanceof EdgeTtsError ? 503 : 500;
+    if (status === 500) console.error("[council/speech]", error);
     return NextResponse.json<ApiError>(
       {
-        error: error instanceof Error ? error.message : "Speech synthesis failed.",
+        error: "Speech synthesis is unavailable.",
         code: "TTS_FAILED",
-        remedy: "The council will speak with the browser's built-in voice instead.",
+        remedy:
+          "The council will speak with the browser's built-in voice instead.",
       },
       { status },
     );

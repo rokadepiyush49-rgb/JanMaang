@@ -1,10 +1,14 @@
 """AI service settings."""
 
+import re
 from functools import lru_cache
-from typing import Literal
+from typing import Literal, Self
 
-from pydantic import Field, RedisDsn
+from pydantic import Field, RedisDsn, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
+
+# Matches the .env.example values; see services/api/app/core/config.py.
+_PLACEHOLDER = re.compile(r"change-?me|dev-only|not-a-real|not-real|example|placeholder", re.I)
 
 
 class Settings(BaseSettings):
@@ -29,6 +33,21 @@ class Settings(BaseSettings):
     cache_ttl_seconds: int = 86_400
 
     daily_token_budget: int = Field(default=2_000_000, ge=0)
+
+    @model_validator(mode="after")
+    def _deployed_environment_guards(self) -> Self:
+        """Refuse to start a deployed service on a published or empty key."""
+        if self.environment == "development":
+            return self
+        problems: list[str] = []
+        if self.debug:
+            problems.append("DEBUG must be false")
+        key = self.internal_api_key
+        if len(key) < 32 or _PLACEHOLDER.search(key):
+            problems.append("INTERNAL_API_KEY must be a generated value of 32+ characters")
+        if problems:
+            raise ValueError(f"Unsafe {self.environment} configuration: " + "; ".join(problems))
+        return self
 
     @property
     def is_production(self) -> bool:

@@ -2,6 +2,20 @@ import { GoogleGenAI, Type } from '@google/genai';
 import { HttpsError, onCall } from 'firebase-functions/v2/https';
 import { defineSecret } from 'firebase-functions/params';
 
+import { takeQuota } from './quota';
+
+/** Reports per citizen per hour. Generous for a person, useless to a script. */
+const REPORTS_PER_HOUR = 20;
+
+/**
+ * Model output is untrusted text. Enums are clamped below; free text is
+ * length-capped so a manipulated or runaway response cannot write an
+ * unbounded string into a public demand.
+ */
+function clampText(value: unknown, max: number, fallback: string): string {
+  return typeof value === 'string' && value.trim() ? value.trim().slice(0, max) : fallback;
+}
+
 /**
  * The Gemini API key. Stored in Secret Manager and injected at runtime — it is
  * never present in the Flutter app, in source control, or in any client
@@ -42,6 +56,8 @@ export const analyzeReport = onCall(
     if (transcript.length > 4000) {
       throw new HttpsError('invalid-argument', 'That report is too long.');
     }
+
+    await takeQuota(request.auth.uid, 'analyzeReport', REPORTS_PER_HOUR, 60 * 60 * 1000);
 
     const ai = new GoogleGenAI({ apiKey: GEMINI_API_KEY.value() });
 
@@ -102,23 +118,33 @@ export const analyzeReport = onCall(
       throw new HttpsError('internal', 'Could not understand that report.');
     }
 
-    const parsed = JSON.parse(text) as Record<string, string>;
+    let parsed: Record<string, unknown>;
+    try {
+      parsed = JSON.parse(text) as Record<string, unknown>;
+    } catch {
+      throw new HttpsError('internal', 'Could not understand that report.');
+    }
 
     // Never trust the model's word for an enum — clamp to the known set.
-    const category = (CATEGORIES as readonly string[]).includes(parsed.category)
-      ? parsed.category
+    const category = (CATEGORIES as readonly string[]).includes(parsed.category as string)
+      ? (parsed.category as string)
       : 'other';
-    const severity = (SEVERITIES as readonly string[]).includes(parsed.severity)
-      ? parsed.severity
+    const severity = (SEVERITIES as readonly string[]).includes(parsed.severity as string)
+      ? (parsed.severity as string)
       : 'medium';
 
     return {
       category,
       severity,
-      title: parsed.title ?? 'Civic Issue',
-      mentionedLocation: parsed.mentionedLocation ?? '',
-      summary: parsed.summary ?? transcript,
-      detectedLanguage: parsed.detectedLanguage ?? 'en',
+      title: clampText(parsed.title, 120, 'Civic Issue'),
+      mentionedLocation: clampText(parsed.mentionedLocation, 200, ''),
+      summary: clampText(parsed.summary, 1000, transcript.slice(0, 1000)),
+      // BCP-47 tags are short and ASCII; anything else falls back.
+      detectedLanguage: /^[A-Za-z]{2,3}(-[A-Za-z0-9]{2,8})*$/.test(
+        String(parsed.detectedLanguage ?? ''),
+      )
+        ? String(parsed.detectedLanguage)
+        : 'en',
     };
   },
 );

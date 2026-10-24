@@ -42,12 +42,17 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version-file: .nvmrc }
       - run: pnpm install --frozen-lockfile
-      - run: pnpm audit --audit-level high || echo "::warning::pnpm audit found advisories"
+      # Blocking. These used to warn only, which let a Next.js release with two
+      # unauthenticated RCE advisories sit in the lockfile with CI green. The
+      # tree is clean as of the security-hardening branch; keep it that way.
+      - name: JavaScript advisories (high and critical fail the build)
+        run: pnpm audit --audit-level high
       - uses: astral-sh/setup-uv@v3
         with: { version: "0.5.4" }
       - name: Python advisories
         run: |
-          uvx pip-audit -r <(cd services/api && uv export --no-hashes 2>/dev/null) \
-            || echo "::warning::pip-audit found advisories in services/api"
-          uvx pip-audit -r <(cd services/ai && uv export --no-hashes 2>/dev/null) \
-            || echo "::warning::pip-audit found advisories in services/ai"
+          for svc in api ai; do
+            (cd "services/$svc" && uv export --frozen --no-dev --no-hashes --no-emit-project) \
+              > "/tmp/requirements-$svc.txt"
+            uvx pip-audit -r "/tmp/requirements-$svc.txt"
+          done

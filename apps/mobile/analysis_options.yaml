@@ -18,6 +18,9 @@ analyzer:
     - windows/**
     - macos/**
     - linux/**
+    # TypeScript Cloud Functions and their tests; node_modules there ships
+    # Dart templates (firebase-tools) the analyzer would otherwise scan.
+    - firebase/**
 
 linter:
   # The lint rules applied to this project can be customized in the

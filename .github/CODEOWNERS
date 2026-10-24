@@ -31,6 +31,10 @@
 # The permission matrix. Nine roles: the largest silent-failure surface here.
 /services/api/app/core/permissions.py    @janmaang/backend @janmaang/devops
 
+# The mobile app's authorisation layer: every citizen record it writes.
+/apps/mobile/firebase/firestore.rules    @janmaang/mobile @janmaang/devops
+/apps/mobile/firebase/storage.rules      @janmaang/mobile @janmaang/devops
+
 # Pipeline and deploy changes.
 /.github/workflows/                     @janmaang/devops
 /.github/CODEOWNERS                     @janmaang/core

@@ -3,28 +3,41 @@ rules_version = '2';
 // Evidence photos. Readable publicly (they are part of the public record),
 // writable only by the person the path belongs to, capped so a single upload
 // cannot exhaust a citizen's data plan or the project's quota.
+//
+// Evidence is append-only: `create` and `delete` are granted, `update` is not,
+// so once a photo is attached to a report or a verification nobody — the
+// uploader included — can swap different bytes in under the same name.
 service firebase.storage {
   match /b/{bucket}/o {
 
-    function isImage() {
-      return request.resource.contentType.matches('image/.*');
+    function isOwner(uid) {
+      return request.auth != null && request.auth.uid == uid;
+    }
+
+    // Raster photos only. A bare `image/.*` admitted image/svg+xml, which
+    // can carry script and is served back publicly from this bucket.
+    function isPhoto() {
+      return request.resource.contentType.matches('image/(jpeg|png|webp|heic|heif)');
     }
 
     function underSizeLimit() {
-      return request.resource.size < 8 * 1024 * 1024;
+      return request.resource.size > 0
+          && request.resource.size < 8 * 1024 * 1024;
     }
 
     match /reports/{uid}/{demandId}/{fileName} {
       allow read: if true;
-      allow write: if request.auth != null
-                   && request.auth.uid == uid
-                   && isImage()
-                   && underSizeLimit();
+      allow create: if isOwner(uid) && isPhoto() && underSizeLimit();
+      allow delete: if isOwner(uid);
     }
 
-    match /verifications/{verificationId}/{fileName} {
+    // Was /verifications/{verificationId}/{fileName} with `write` for any
+    // signed-in user: anyone could overwrite or delete another person's
+    // verification evidence. Now keyed by uploader, like reports.
+    match /verifications/{uid}/{verificationId}/{fileName} {
       allow read: if true;
-      allow write: if request.auth != null && isImage() && underSizeLimit();
+      allow create: if isOwner(uid) && isPhoto() && underSizeLimit();
+      allow delete: if isOwner(uid);
     }
   }
 }

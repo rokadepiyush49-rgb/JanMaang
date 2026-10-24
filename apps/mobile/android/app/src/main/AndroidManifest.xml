@@ -1,8 +1,15 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- allowBackup=false: once Firebase is wired up, app data holds the
+         signed-in session; Android's cloud/adb backup would copy it off the
+         device. usesCleartextTraffic=false: the default for targetSdk 28+,
+         stated so a later SDK or manifest merge cannot quietly flip it. -->
     <application
         android:label="janmaang"
         android:name="${applicationName}"
-        android:icon="@mipmap/ic_launcher">
+        android:icon="@mipmap/ic_launcher"
+        android:allowBackup="false"
+        android:fullBackupContent="false"
+        android:usesCleartextTraffic="false">
         <activity
             android:name=".MainActivity"
             android:exported="true"
