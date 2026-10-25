@@ -6,6 +6,11 @@ import {
   parseDemandId,
   parsePhotoUrls,
 } from './verificationInput';
+import {
+  assertMayClaimKind,
+  assertMayVerify,
+  nextDemandStatus,
+} from './verificationPolicy';
 
 /**
  * Records a citizen's or field officer's verdict on completed work.
@@ -39,12 +44,9 @@ export const submitVerification = onCall(
     const checklist = parseChecklist(request.data?.checklist);
     const photoUrls = parsePhotoUrls(request.data?.photoUrls);
 
-    if (kind === 'field' && request.auth.token.officer !== true) {
-      throw new HttpsError(
-        'permission-denied',
-        'Only a field officer can submit a field verification.',
-      );
-    }
+    const isOfficer = request.auth.token.officer === true;
+    // Fail before any read when the claim is missing.
+    assertMayClaimKind(kind, isOfficer);
 
     const db = getFirestore();
     const demandRef = db.collection('demands').doc(demandId);
@@ -53,36 +55,17 @@ export const submitVerification = onCall(
       .doc(`${demandId}_${uid}_${kind}`);
 
     await db.runTransaction(async (tx) => {
-      const demand = await tx.get(demandRef);
-      if (!demand.exists) {
-        throw new HttpsError('not-found', 'That demand no longer exists.');
-      }
-      if (demand.data()?.status !== 'inProgress') {
-        throw new HttpsError(
-          'failed-precondition',
-          'This demand is not awaiting verification yet.',
-        );
-      }
+      // Gather the facts here; verificationPolicy.ts makes every decision.
+      const demandSnap = await tx.get(demandRef);
+      const demand = demandSnap.exists ? (demandSnap.data() ?? {}) : null;
+      const needsSupporterCheck =
+        kind === 'citizen' && demand !== null && demand.reporterId !== uid;
+      const isSupporter = needsSupporterCheck
+        ? (await tx.get(demandRef.collection('supporters').doc(uid))).exists
+        : false;
+      const alreadyVerified = (await tx.get(verificationRef)).exists;
 
-      if (kind === 'citizen') {
-        const isReporter = demand.data()?.reporterId === uid;
-        const supporter = isReporter
-          ? null
-          : await tx.get(demandRef.collection('supporters').doc(uid));
-        if (!isReporter && !supporter?.exists) {
-          throw new HttpsError(
-            'permission-denied',
-            'Only residents who raised or backed this demand can verify it.',
-          );
-        }
-      }
-
-      if ((await tx.get(verificationRef)).exists) {
-        throw new HttpsError(
-          'already-exists',
-          'You have already verified this demand.',
-        );
-      }
+      assertMayVerify({ uid, isOfficer, kind, demand, isSupporter, alreadyVerified });
 
       tx.create(verificationRef, {
         demandId,
@@ -94,12 +77,11 @@ export const submitVerification = onCall(
         at: new Date(),
       });
 
-      // A field officer's sign-off alone does not close a demand; the citizens
-      // who reported it get the final say.
-      if (isFixed && kind === 'citizen') {
-        tx.update(demandRef, { status: 'citizenVerified' });
-      } else if (!isFixed) {
-        tx.update(demandRef, { status: 'funded', reopenedAt: new Date() });
+      const status = nextDemandStatus(isFixed, kind);
+      if (status === 'citizenVerified') {
+        tx.update(demandRef, { status });
+      } else if (status === 'funded') {
+        tx.update(demandRef, { status, reopenedAt: new Date() });
       }
     });
 

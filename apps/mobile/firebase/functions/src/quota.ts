@@ -10,6 +10,28 @@ import { HttpsError } from 'firebase-functions/v2/https';
  * firestore.rules has no match for `rateLimits`, so clients can neither read
  * nor reset their own.
  */
+export interface QuotaWindow {
+  windowStart?: number;
+  count?: number;
+}
+
+/**
+ * The fixed-window decision, separate from the transaction so it can be
+ * unit-tested. Returns the counter to write, or no write when refused.
+ */
+export function consumeQuota(
+  current: QuotaWindow | undefined,
+  now: number,
+  limit: number,
+  windowMs: number,
+): { allowed: boolean; next?: Required<QuotaWindow> } {
+  const fresh = !current?.windowStart || now - current.windowStart >= windowMs;
+  const windowStart = fresh ? now : current!.windowStart!;
+  const count = fresh ? 0 : (current?.count ?? 0);
+  if (count >= limit) return { allowed: false };
+  return { allowed: true, next: { windowStart, count: count + 1 } };
+}
+
 export async function takeQuota(
   uid: string,
   name: string,
@@ -22,15 +44,9 @@ export async function takeQuota(
 
   const allowed = await db.runTransaction(async (tx) => {
     const snap = await tx.get(ref);
-    const data = snap.data() as { windowStart?: number; count?: number } | undefined;
-    const fresh = !data?.windowStart || now - data.windowStart >= windowMs;
-    const count = fresh ? 0 : (data?.count ?? 0);
-    if (count >= limit) return false;
-    tx.set(ref, {
-      windowStart: fresh ? now : data!.windowStart,
-      count: count + 1,
-    });
-    return true;
+    const result = consumeQuota(snap.data() as QuotaWindow | undefined, now, limit, windowMs);
+    if (result.next) tx.set(ref, result.next);
+    return result.allowed;
   });
 
   if (!allowed) {

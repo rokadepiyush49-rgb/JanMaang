@@ -45,7 +45,7 @@ treats it as P0.
 | AI: ruff, format, mypy, 10 tests | pass |
 | Mobile: format, analyze, 74 tests | pass |
 | Functions: `tsc`, 8 input tests | pass |
-| Firebase rules tests (34) | not run — needs Java; runs in CI |
+| Firebase rules + input tests (42) | pass in CI (`ci-firebase.yml`) |
 | Dependency audits (pnpm, pip-audit ×2, npm) | 0 known vulnerabilities |
 | Docker image builds | not run — Docker daemon off |
 

@@ -25,8 +25,9 @@ cd apps/mobile && flutter test
 cd apps/mobile/firebase/tests && npm ci && npm test
 ```
 
-The last one needs Java 11+ for the Firebase emulators; CI runs it in
-`ci-firebase.yml`.
+The last one starts the Firestore and Storage emulators, which need Java 11+.
+On this machine: `export JAVA_HOME=/opt/homebrew/opt/openjdk@17` first. CI runs
+it in `ci-firebase.yml` on every change under `apps/mobile/firebase`.
 
 ## Results
 
@@ -47,10 +48,10 @@ The last one needs Java 11+ for the Firebase emulators; CI runs it in
 | API | `test_permissions.py`, `test_module_boundaries.py`, `test_health.py` | existing | **Pass** (26 total) |
 | AI | `test_security.py`: missing/wrong key 401, right key 200, unset key refuses all; deployed settings refuse weak keys | as stated | **Pass** (10 total) |
 | Functions | `verification-input.test.js`: demand-id traversal, checklist bounds and shape, photo URLs limited to https Storage hosts, max 10 | as stated | **Pass** (8) |
-| Firestore rules | `rules.test.js`: 7 server-only fields refused on create; spoofed reporter; non-`reported` status; reporter cannot rewrite `reporterId`, status or score; others cannot edit; supporters only for self and existing demands; client writes refused on 5 server collections; quota docs hidden; users cannot self-grant officer/trust | as stated | **Passed** in CI at `bb69daf`, but that run did not reset the emulator between tests; per-test isolation added afterwards — **re-run pending** |
-| Storage rules | `rules.test.js`: owner upload ok; other folder, SVG, empty, >8 MB, overwrite, anonymous refused; cannot touch another's verification photo; owner create/delete ok | as stated | Owner-overwrite case failed at `bb69daf`; rules now require `resource == null` on create, and it passed at `0b247e0`. Per-test isolation added afterwards — **re-run pending** |
-| submitVerification | Reporter/supporter/officer authorisation inside the transaction | as stated | **Not run** — needs emulator; covered only by code review and `tsc` |
-| analyzeReport quota | 21st call in an hour → `resource-exhausted` | as stated | **Not run** — needs emulator |
+| Firestore rules | `rules.test.js`: 7 server-only fields refused on create; spoofed reporter; non-`reported` status; reporter cannot rewrite `reporterId`, status or score; others cannot edit; supporters only for self and existing demands; client writes refused on 5 server collections; quota docs hidden; users cannot self-grant officer/trust | as stated | **Pass** in CI — 42/42 (34 rules + 8 input) at `e315a89`, each test from a clean emulator |
+| Storage rules | `rules.test.js`: owner upload ok; other folder, SVG, empty, >8 MB, overwrite, anonymous refused; cannot touch another's verification photo; owner create/delete ok | as stated | **Pass** in CI at `e315a89`. The first runs caught a real gap (owner overwrite) and two harness bugs, all fixed |
+| submitVerification | `verification-policy.test.js`: reporter and supporter may verify, a stranger may not; field verdict needs the officer claim and the claim does not grant a citizen verdict; missing or not-in-progress demand refused; second verdict refused; only a citizen's "fixed" closes, either side's "broken" reopens | as stated | **Pass** (14 with quota). The transaction only gathers facts and applies the result; that glue is typechecked, not executed |
+| analyzeReport quota | `verification-policy.test.js`: 20 calls allowed, 21st refused with no write, new window after an hour | as stated | **Pass** |
 | Mobile | `flutter analyze`, `dart format`, 74 widget/unit tests | clean | **Pass** |
 | Dependencies | `pnpm audit` (all), `pnpm audit --prod`, `pip-audit` api and ai, `npm audit` functions | 0 known | **Pass** |
 | Secrets | History scan for `.env` files on all branches; pattern scan of tracked files | none | **Pass** |

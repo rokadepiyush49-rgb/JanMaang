@@ -96,11 +96,11 @@ changed, verification could not run here (see SECURITY_TEST_PLAN.md);
 |---|---|---|---|---|
 | S-01 | Critical | Passwordless "demo" sign-in for every role, Super Admin included, active in production builds; one shared password published in the README | web auth | Fixed |
 | S-02 | Critical | `next@16.3.4`: two unauthenticated RCE advisories (Image Optimization API, `use cache`), plus SSRF and a Server Actions DoS | web deps | Fixed |
-| S-03 | Critical | `submitVerification`: any signed-in account could close or reopen any in-progress demand; `kind: 'field'` never checked the officer claim | Cloud Functions | Fixed, partly verified |
-| S-04 | High | Storage: any signed-in user could overwrite or delete anyone's verification photo; `image/svg+xml` accepted and served publicly | storage.rules | Fixed; emulator tests in CI (isolated re-run pending) |
+| S-03 | Critical | `submitVerification`: any signed-in account could close or reopen any in-progress demand; `kind: 'field'` never checked the officer claim | Cloud Functions | Fixed |
+| S-04 | High | Storage: any signed-in user could overwrite or delete anyone's verification photo; `image/svg+xml` accepted and served publicly | storage.rules | Fixed |
 | S-05 | High | `/api/council/{turn,verdict,speech}` open to the internet: spends the Groq key, free TTS proxy | web API | Fixed |
 | S-06 | High | Open redirects: proxy accepted `?next=//evil`, login action accepted `?next=/\evil` | web auth | Fixed |
-| S-07 | High | Firestore: demand creation could set `supporterCount`, `scoreBreakdown`, `totalRanked`, `code`; reporter could rewrite `reporterId`; supporters on non-existent demands | firestore.rules | Fixed; emulator tests in CI (isolated re-run pending) |
+| S-07 | High | Firestore: demand creation could set `supporterCount`, `scoreBreakdown`, `totalRanked`, `code`; reporter could rewrite `reporterId`; supporters on non-existent demands | firestore.rules | Fixed |
 | S-08 | High | Placeholder secrets from `.env.example` accepted in production (web `AUTH_SECRET`, API `AUTH_SECRET`/`AI_SERVICE_KEY`, AI `INTERNAL_API_KEY`) → forgeable sessions | web, api, ai config | Fixed |
 | S-09 | High | `pyjwt` 2.13 (12 advisories; it verifies every future API token), `urllib3`, `certifi`, `opentelemetry-api` | api, ai deps | Fixed |
 | S-10 | High | Unused runtime deps with advisories shipped: `maplibre-gl` (critical XSS), `firebase` (grpc), `zod` | web deps | Fixed (removed) |
@@ -111,7 +111,7 @@ changed, verification could not run here (see SECURITY_TEST_PLAN.md);
 | S-15 | Medium | API: no security headers, no body limit, credentialed CORS with `*` methods/headers, `CORS_ORIGINS=*` accepted, crash response shape left to defaults | api | Fixed |
 | S-16 | Medium | API crashed at startup on the documented `CORS_ORIGINS=http://…` (pydantic-settings JSON-decoded it) | api config | Fixed |
 | S-17 | Medium | AI internal key compared with `!=` (timing) | ai | Fixed |
-| S-18 | Medium | `analyzeReport`: no per-user quota; model free text unbounded | Cloud Functions | Fixed, unverified (quota) |
+| S-18 | Medium | `analyzeReport`: no per-user quota; model free text unbounded | Cloud Functions | Fixed |
 | S-19 | Medium | Council routes returned raw upstream error messages | web API | Fixed |
 | S-20 | Medium | Functions `package.json` uninstallable (`eslint ^9.40.0`), no lockfile, 9 advisories | Cloud Functions | Fixed |
 | S-21 | Medium | Mobile: app-data backup allowed; release builds log stack traces | mobile | Fixed |
@@ -144,8 +144,8 @@ pass.
 `officer` claim for `field`; one verdict per person per demand per kind;
 validated checklist and Storage-only HTTPS photo URLs; all inside one Firestore
 transaction. *Verified:* `tsc` clean; 8 input-validation tests pass. The
-transactional authorisation path needs the emulator, which needs Java; that
-test runs in the new `ci-firebase.yml`.
+decisions themselves live in `verificationPolicy.ts` as pure functions with
+14 unit tests; the transaction only gathers facts and applies the result.
 
 ## Out of scope / not assessed
 

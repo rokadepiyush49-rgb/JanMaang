@@ -52,7 +52,7 @@ web tier scales out.
 
 | Control | Files | Finding |
 |---|---|---|
-| `submitVerification`: reporter/supporter for citizen verdicts, `officer` claim for field verdicts, one verdict per person/demand/kind, transaction, validated payload | `functions/src/submitVerification.ts`, `functions/src/verificationInput.ts` | S-03 |
+| `submitVerification`: reporter/supporter for citizen verdicts, `officer` claim for field verdicts, one verdict per person/demand/kind, transaction, validated payload | `functions/src/submitVerification.ts`, `functions/src/verificationPolicy.ts`, `functions/src/verificationInput.ts` | S-03 |
 | `analyzeReport`: 20 reports/user/hour shared across instances; model text length-capped; BCP-47 check; JSON parse failure handled | `functions/src/analyzeReport.ts`, `functions/src/quota.ts` | S-18 |
 | Storage: raster types only, 0 < size < 8 MB, create/delete for the owner, no overwrite; verification photos moved under the uploader's uid | `storage.rules`, `lib/core/constants/firestore_paths.dart` | S-04 |
 | Firestore: creation blocks every server-only field; `reporterId` immutable; supporters only on existing demands | `firestore.rules` | S-07 |

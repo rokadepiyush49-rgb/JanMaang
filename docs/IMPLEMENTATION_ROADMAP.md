@@ -15,6 +15,8 @@ Next / Planned / Blocked. Evidence for Done items is in
 | D-3 | All dependency trees audited clean; audits now block CI | `pnpm audit`, `pip-audit`, `npm audit` |
 | D-4 | Contracts CI job fixed (doubled path, untracked output) | job replayed locally; pushed in `e9f9a86` |
 | D-5 | Deployment scaffolding: health checks, smoke tests, Kustomize, Dependabot | `kubectl kustomize`, `bash -n` |
+| D-6 | Firebase rules and input tests run in CI against the emulators (was P0-4) | `ci-firebase.yml`: 42/42 at `e315a89` |
+| D-7 | Repo moved to Node 22 LTS (Node 20 end-of-life; vite 7 and firebase-admin 14 need it) | all PR #3 checks green |
 
 ## P0 — before any production deploy
 
@@ -36,8 +38,8 @@ Next / Planned / Blocked. Evidence for Done items is in
 ### P0-3 · Initial schema and migrations — **Planned**
 Users, roles/scopes, demands, clusters, verifications, works, allocations, audit events (hash-chained). *Acceptance:* `alembic upgrade head` on an empty database in CI; downgrade of the last revision works; every table has an owner-scoped index for the queries P1 needs.
 
-### P0-4 · Run the Firebase rules tests in CI — **Next**
-Push this branch; confirm `ci-firebase.yml` passes. If (b) is chosen in P0-2 these rules stay load-bearing; if (a), they still guard the Storage bucket.
+### P0-4 · Run the Firebase rules tests in CI — **Done** (D-6)
+If (b) is chosen in P0-2 these rules stay load-bearing; if (a), they still guard the Storage bucket. The decisions inside `submitVerification` and the `analyzeReport` quota are unit-tested as pure functions (`verificationPolicy.ts`, `consumeQuota`); only the thin transaction glue is not executed in a test.
 
 ### P0-5 · Release signing and App Check — **Planned (manual)**
 See the production checklist §5–6.
