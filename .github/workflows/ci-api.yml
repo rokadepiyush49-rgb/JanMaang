@@ -18,7 +18,7 @@ jobs:
     name: lint · types · boundaries
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-python-service
         with: { service: services/api }
       - name: Ruff
@@ -57,7 +57,7 @@ jobs:
       REDIS_URL: redis://localhost:6379/0
       AUTH_SECRET: ci-only-secret-value-not-real
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
       - uses: ./.github/actions/setup-python-service
         with: { service: services/api }
       - name: Migrations apply cleanly from scratch

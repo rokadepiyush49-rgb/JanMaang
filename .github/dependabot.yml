@@ -53,6 +53,12 @@ updates:
     directories: ["/apps/web", "/services/api", "/services/ai", "/infrastructure/docker/postgres"]
     schedule: { interval: weekly, day: monday }
     labels: [dependencies, infrastructure]
+    ignore:
+      # Node follows .nvmrc, an LTS line. A major bump is a deliberate change,
+      # and Dependabot otherwise proposes odd, short-lived releases (it opened
+      # node:25, already end-of-life). Minor and patch updates still arrive.
+      - dependency-name: "node"
+        update-types: ["version-update:semver-major"]
     groups:
       base-images:
         patterns: ["*"]
