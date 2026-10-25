@@ -43,6 +43,10 @@ class Settings(BaseSettings):
     firebase_project_id: str = ""
     firebase_credentials_path: str = ""
     firebase_credentials_json: str = ""
+    # Ask Firebase on every request whether the user's tokens were revoked or
+    # the account disabled. Needs a credential; may be switched off only in
+    # development, where there may be none.
+    firebase_check_revoked: bool = True
 
     storage_provider: Literal["firebase", "s3"] = "firebase"
     storage_bucket: str = ""
@@ -90,6 +94,10 @@ class Settings(BaseSettings):
             problems.append("AUTH_SECRET must be a generated value of 32+ characters")
         if not self.ai_service_key or _is_placeholder(self.ai_service_key):
             problems.append("AI_SERVICE_KEY must be set to a generated value")
+        if not self.firebase_project_id:
+            problems.append("FIREBASE_PROJECT_ID must be set (it is the token audience)")
+        if not self.firebase_check_revoked:
+            problems.append("FIREBASE_CHECK_REVOKED must stay true")
         insecure = [o for o in self.cors_origins if not o.startswith("https://")]
         if insecure:
             problems.append(f"CORS_ORIGINS must be https in {self.environment}: {insecure}")
