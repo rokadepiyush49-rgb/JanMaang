@@ -13,10 +13,28 @@
  *
  * Because it is credential-shaped, be blunt about what it is not: the password
  * below is a constant, it is in the repository, and it authenticates nobody.
- * Never deploy this to anything reachable from the internet.
+ *
+ * So it is OFF in every production build unless DEMO_AUTH=enabled is set
+ * deliberately (a staging review, say). Without that gate a production deploy
+ * would let anyone become Super Admin with a password printed in the README.
+ * `server-only` keeps the list and the password out of the browser bundle.
  */
 
+import "server-only";
+
 import type { Role } from "./roles";
+
+/**
+ * Whether the demo personas may sign anyone in.
+ *
+ * Development and test builds: always. Production builds (which includes
+ * staging, since it runs `next build`): only with DEMO_AUTH=enabled. With it
+ * unset, sign-in fails closed until the API's auth module replaces this file.
+ */
+export function demoAuthEnabled(): boolean {
+  if (process.env.NODE_ENV !== "production") return true;
+  return process.env.DEMO_AUTH === "enabled";
+}
 
 export interface DirectoryUser {
   userId: string;
@@ -96,6 +114,7 @@ export const DEMO_USERS: readonly DirectoryUser[] = [
 ];
 
 export function demoUserFor(role: Role): DirectoryUser | undefined {
+  if (!demoAuthEnabled()) return undefined;
   return DEMO_USERS.find((user) => user.role === role);
 }
 
@@ -107,6 +126,7 @@ export async function authenticate(
   email: string,
   password: string,
 ): Promise<DirectoryUser | null> {
+  if (!demoAuthEnabled()) return null;
   const match = DEMO_USERS.find(
     (user) => user.email.toLowerCase() === email.trim().toLowerCase(),
   );

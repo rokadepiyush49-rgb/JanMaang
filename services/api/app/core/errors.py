@@ -7,6 +7,8 @@ one error handler each instead of one per screen.
 from fastapi import FastAPI, Request, status
 from fastapi.responses import JSONResponse
 
+from app.core.logging import get_logger
+
 
 class AppError(Exception):
     """Base for every expected failure. Unexpected ones become a 500."""
@@ -54,4 +56,19 @@ def register_error_handlers(app: FastAPI) -> None:
         return JSONResponse(
             status_code=exc.status_code,
             content={"code": exc.code, "detail": exc.detail},
+        )
+
+    @app.exception_handler(Exception)
+    async def _unexpected(request: Request, exc: Exception) -> JSONResponse:
+        """Anything unplanned: log it in full, tell the caller nothing.
+
+        Without this, the client shape for a crash depended on DEBUG — and a
+        traceback names files, queries and sometimes values.
+        """
+        get_logger(__name__).exception(
+            "api.unhandled_error", path=request.url.path, method=request.method
+        )
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"code": "internal_error", "detail": "Internal server error"},
         )

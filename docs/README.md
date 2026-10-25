@@ -9,6 +9,9 @@
 | [deployment/](deployment/) | Environments, runbook, rollback |
 | [development/](development/) | Setup, workflow, conventions, troubleshooting |
 | [product/](product/) | Roles, journeys, glossary, roadmap |
+| [security/](security/) | Security audit, implementation notes, test plan, production checklist |
+| [PROJECT_AUDIT.md](PROJECT_AUDIT.md) | What is built, what is missing, risks, current baseline |
+| [IMPLEMENTATION_ROADMAP.md](IMPLEMENTATION_ROADMAP.md) | Prioritised work with acceptance criteria and status |
 | [SOURCES.md](SOURCES.md) | Data provenance. The app renders this at `/method` |
 | [STITCH_INVENTORY.md](STITCH_INVENTORY.md) | Design source inventory |
 

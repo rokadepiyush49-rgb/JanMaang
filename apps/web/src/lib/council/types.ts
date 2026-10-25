@@ -158,7 +158,11 @@ export interface ApiError {
     | "MISSING_KEY"
     | "RATE_LIMITED"
     | "UPSTREAM_FAILED"
-    | "TTS_FAILED";
+    | "TTS_FAILED"
+    // From lib/council/guard.ts, before a route does any work.
+    | "UNAUTHENTICATED"
+    | "FORBIDDEN"
+    | "TOO_LARGE";
   /** Present when the fix is a specific action the developer can take. */
   remedy?: string;
 }

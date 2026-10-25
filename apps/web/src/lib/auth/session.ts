@@ -37,7 +37,10 @@ const encoder = new TextEncoder();
 function base64UrlEncode(bytes: Uint8Array): string {
   let binary = "";
   for (const byte of bytes) binary += String.fromCharCode(byte);
-  return btoa(binary).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/, "");
+  return btoa(binary)
+    .replace(/\+/g, "-")
+    .replace(/\//g, "_")
+    .replace(/=+$/, "");
 }
 
 function base64UrlDecode(value: string): Uint8Array<ArrayBuffer> {
@@ -65,13 +68,31 @@ function importKey(secret: string): Promise<CryptoKey> {
  */
 export function sessionSecret(): string {
   const secret = process.env.AUTH_SECRET;
-  if (secret && secret.length >= 16) return secret;
   if (process.env.NODE_ENV === "production") {
-    throw new Error(
-      "AUTH_SECRET is unset or too short. Generate one with: openssl rand -hex 32",
-    );
+    if (!isProductionGradeSecret(secret)) {
+      throw new Error(
+        "AUTH_SECRET is unset, too short, or a placeholder. Generate one with: openssl rand -hex 32",
+      );
+    }
+    return secret;
   }
+  if (secret && secret.length >= 16) return secret;
   return "dev-only-not-a-real-secret-change-me";
+}
+
+/**
+ * The .env.example value is long enough to pass a length check and is
+ * published in this repository, so a deploy that copied the example file
+ * would sign every session with a key anyone can read. Production refuses
+ * anything shorter than 32 characters or shaped like a placeholder.
+ */
+const PLACEHOLDER =
+  /change-?me|dev-only|not-a-real|example|placeholder|secret$/i;
+
+export function isProductionGradeSecret(
+  secret: string | undefined,
+): secret is string {
+  return Boolean(secret && secret.length >= 32 && !PLACEHOLDER.test(secret));
 }
 
 export async function signSession(

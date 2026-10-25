@@ -590,6 +590,7 @@ flowchart LR
 | [0003](docs/architecture/decisions/0003-separate-ai-service.md) | One separate AI service, modular by capability, stateless |
 | [0004](docs/architecture/decisions/0004-single-web-app.md) | One web app with role-based routes |
 | [0005](docs/architecture/decisions/0005-council-in-the-web-app.md) | The AI Project Council runs in the web app (accepted debt) |
+| [0006](docs/architecture/decisions/0006-postgres-is-the-system-of-record-for-demands.md) | PostgreSQL is the system of record for demands; roles live in the database, not Firebase claims |
 
 See [ARCHITECTURE.md](ARCHITECTURE.md) for how modules can be extracted later without a rewrite.
 
@@ -692,7 +693,7 @@ three, so there is one command interface to learn.
 ### Prerequisites
 
 - Docker + Docker Compose
-- Node.js ≥ 20.11 and pnpm 9
+- Node.js ≥ 22.12 (see `.nvmrc`) and pnpm 9
 - Python 3.12 and [uv](https://github.com/astral-sh/uv)
 - Flutter SDK (for the citizen app)
 

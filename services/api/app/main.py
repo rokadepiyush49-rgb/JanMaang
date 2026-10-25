@@ -15,7 +15,9 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.core.config import get_settings
 from app.core.errors import register_error_handlers
+from app.core.firebase_auth import FirebaseTokenVerifier
 from app.core.logging import configure_logging, get_logger
+from app.core.middleware import BodySizeLimitMiddleware, SecurityHeadersMiddleware
 from app.modules.academics.router import router as academics_router
 from app.modules.analytics.router import router as analytics_router
 from app.modules.audit.router import router as audit_router
@@ -36,6 +38,7 @@ from app.modules.problems.router import router as problems_router
 from app.modules.projects.router import router as projects_router
 from app.modules.rbac.router import router as rbac_router
 from app.modules.teams.router import router as teams_router
+from app.modules.users import service as users_service
 from app.modules.users.router import router as users_router
 
 logger = get_logger(__name__)
@@ -93,16 +96,32 @@ def create_app() -> FastAPI:
         openapi_url=f"{API_V1}/openapi.json",
     )
 
+    # Clients authenticate with a bearer token, never a cookie, so the API
+    # does not need credentialed CORS — and leaving it off means a
+    # misconfigured origin list can never leak a cookie-authed response.
+    # Methods and headers are the ones the clients actually send.
     if settings.cors_origins:
         app.add_middleware(
             CORSMiddleware,
             allow_origins=settings.cors_origins,
-            allow_credentials=True,
-            allow_methods=["*"],
-            allow_headers=["*"],
+            allow_credentials=False,
+            allow_methods=["GET", "POST", "PUT", "PATCH", "DELETE"],
+            allow_headers=["Authorization", "Content-Type", "X-Request-ID"],
+            max_age=600,
         )
 
+    # Added last so it runs first: an oversized body is refused before CORS
+    # or routing spend any work on it.
+    app.add_middleware(SecurityHeadersMiddleware, hsts=settings.environment != "development")
+    app.add_middleware(BodySizeLimitMiddleware, max_bytes=settings.max_request_body_bytes)
+
     register_error_handlers(app)
+
+    # Authentication seams (app/core/security.py). core cannot import the
+    # users module, so the app factory — which may — hands both in here.
+    # Tests replace them with fakes; a missing one fails closed with 503.
+    app.state.token_verifier = FirebaseTokenVerifier(settings)
+    app.state.principal_resolver = users_service.resolve_principal
 
     v1 = APIRouter(prefix=API_V1)
     for module_router in MODULE_ROUTERS:

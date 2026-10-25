@@ -16,8 +16,14 @@ abstract final class FirestorePaths {
   static String reportPhoto(String uid, String demandId, String fileName) =>
       'reports/$uid/$demandId/$fileName';
 
-  static String verificationPhoto(String verificationId, String fileName) =>
-      'verifications/$verificationId/$fileName';
+  /// Keyed by the uploader's uid, like [reportPhoto], so storage.rules can
+  /// tell whose evidence a file is and nobody can write into another
+  /// person's verification folder.
+  static String verificationPhoto(
+    String uid,
+    String verificationId,
+    String fileName,
+  ) => 'verifications/$uid/$verificationId/$fileName';
 
   // Callable Cloud Functions
   static const fnAnalyzeReport = 'analyzeReport';

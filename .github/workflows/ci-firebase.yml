@@ -1,0 +1,49 @@
+name: CI · firebase
+
+# firestore.rules and storage.rules are the authorisation layer for every
+# citizen record the mobile app writes, and submitVerification decides
+# whether public money fixed anything. Both are tested here against the real
+# emulators (offline `demo-` project, no credentials), so a rules change that
+# re-opens a hole fails the PR.
+on:
+  pull_request:
+    paths: ["apps/mobile/firebase/**", ".github/workflows/ci-firebase.yml"]
+  push:
+    branches: [main]
+    paths: ["apps/mobile/firebase/**"]
+
+concurrency:
+  group: ci-firebase-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  rules-and-functions:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: apps/mobile/firebase
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+          cache-dependency-path: |
+            apps/mobile/firebase/functions/package-lock.json
+            apps/mobile/firebase/tests/package-lock.json
+      # The Firestore and Storage emulators are Java programs.
+      - uses: actions/setup-java@v4
+        with: { distribution: temurin, java-version: "21" }
+      - run: npm ci
+        working-directory: apps/mobile/firebase/functions
+      - name: Functions typecheck
+        run: npx tsc --noEmit -p .
+        working-directory: apps/mobile/firebase/functions
+      - name: Functions dependency audit
+        run: npm audit --omit=dev --audit-level=high
+        working-directory: apps/mobile/firebase/functions
+      - run: npm ci
+        working-directory: apps/mobile/firebase/tests
+      - name: Rules and input-validation tests (emulators)
+        run: npm test
+        working-directory: apps/mobile/firebase/tests

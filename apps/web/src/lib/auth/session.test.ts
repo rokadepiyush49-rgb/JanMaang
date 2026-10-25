@@ -1,8 +1,10 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 
 import {
+  isProductionGradeSecret,
   newSession,
   SESSION_TTL_SECONDS,
+  sessionSecret,
   signSession,
   verifySession,
   type Session,
@@ -43,7 +45,9 @@ describe("session tokens", () => {
   it("rejects a payload edited to a higher role", async () => {
     const token = await signSession(student(), SECRET);
     const [payload, signature] = token.split(".");
-    const decoded = JSON.parse(atob(payload!.replace(/-/g, "+").replace(/_/g, "/")));
+    const decoded = JSON.parse(
+      atob(payload!.replace(/-/g, "+").replace(/_/g, "/")),
+    );
 
     expect(decoded.role).toBe("student");
     decoded.role = "super_admin";
@@ -79,5 +83,40 @@ describe("session tokens", () => {
     for (const token of [undefined, "", "no-dot", "a.b", "....", "%%%.%%%"]) {
       expect(await verifySession(token, SECRET), token).toBeNull();
     }
+  });
+});
+
+describe("production session secret", () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it("refuses the published example value even though it is long enough", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("AUTH_SECRET", "dev-only-not-a-real-secret-change-me");
+    expect(() => sessionSecret()).toThrow(/AUTH_SECRET/);
+  });
+
+  it("refuses short and missing secrets", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    vi.stubEnv("AUTH_SECRET", "a".repeat(31));
+    expect(() => sessionSecret()).toThrow();
+    vi.stubEnv("AUTH_SECRET", "");
+    expect(() => sessionSecret()).toThrow();
+  });
+
+  it("accepts a generated 32-byte hex key", () => {
+    vi.stubEnv("NODE_ENV", "production");
+    const generated =
+      "9f86d081884c7d659a2feaa0c55ad015a3bf4f1b2b0b822cd15d6c15b0f00a08";
+    vi.stubEnv("AUTH_SECRET", generated);
+    expect(sessionSecret()).toBe(generated);
+  });
+
+  it("keeps the dev fallback outside production", () => {
+    vi.stubEnv("NODE_ENV", "development");
+    vi.stubEnv("AUTH_SECRET", "");
+    expect(sessionSecret()).toMatch(/^dev-only/);
+    expect(isProductionGradeSecret(sessionSecret())).toBe(false);
   });
 });

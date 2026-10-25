@@ -14,6 +14,7 @@
 
 import { NextResponse, type NextRequest } from "next/server";
 
+import { safeRedirectPath } from "@/lib/auth/redirect";
 import { ROLE_HOME, canEnter } from "@/lib/auth/roles";
 import { SESSION_COOKIE, verifySession } from "@/lib/auth/session";
 
@@ -28,7 +29,8 @@ const PUBLIC_PREFIXES = [
 ];
 
 const isPublic = (pathname: string) =>
-  pathname === "/" || PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix));
+  pathname === "/" ||
+  PUBLIC_PREFIXES.some((prefix) => pathname.startsWith(prefix));
 
 export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
@@ -40,9 +42,13 @@ export async function proxy(request: NextRequest) {
     // Signing in again when you already have a session is a dead end; send the
     // user where they were going instead of showing them the form twice.
     if (session && pathname.startsWith("/login")) {
-      const next = request.nextUrl.searchParams.get("next");
-      const destination =
-        next && next.startsWith("/") ? next : ROLE_HOME[session.role];
+      // `startsWith("/")` let `//evil.example` through, and `new URL()`
+      // resolves that to another host: an open redirect for any signed-in
+      // user who clicked a crafted /login link.
+      const destination = safeRedirectPath(
+        request.nextUrl.searchParams.get("next"),
+        ROLE_HOME[session.role],
+      );
       return NextResponse.redirect(new URL(destination, request.url));
     }
     return NextResponse.next();

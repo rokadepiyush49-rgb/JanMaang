@@ -1,0 +1,9 @@
+# Findings reviewed and confirmed NOT to be secrets, by exact fingerprint
+# (commit:file:rule:line), so the rule stays strict everywhere else.
+#
+# 9d4aabb added two test fixtures as literal SHA-256 digests standing in for
+# "a generated key" in the startup-guard tests. They never authenticated
+# anything; the tests now derive them at runtime. The fingerprints pin only
+# those two historical lines, which a PR-range scan still reads.
+9d4aabb10a7930951d86eb26ae7e7429c1c847eb:services/ai/tests/test_security.py:generic-api-key:13
+9d4aabb10a7930951d86eb26ae7e7429c1c847eb:services/api/tests/api/test_security.py:generic-api-key:19

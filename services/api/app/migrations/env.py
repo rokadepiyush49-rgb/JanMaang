@@ -13,33 +13,23 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from app.core.config import get_settings
-from app.core.database import Base
+from app.core.database import (
+    POSTGIS_RELATIONS,
+    Base,
+    compare_type,
+    extension_owned_relations,
+    include_object_excluding,
+)
 
 # Importing every module's models registers them on Base.metadata so
-# --autogenerate sees the full schema. Add new modules here.
-from app.modules import (  # noqa: F401
-    academics,
-    analytics,
-    audit,
-    auth,
-    buildfolio,
-    departments,
-    feedback,
-    files,
-    funding,
-    geography,
-    impact,
-    industry,
-    leaderboard,
-    maps,
-    notifications,
-    problem_statements,
-    problems,
-    projects,
-    rbac,
-    teams,
-    users,
-)
+# --autogenerate sees the full schema. Importing the package alone is not
+# enough: a module's __init__ does not import its models. Add new modules here.
+from app.modules.academics import models as _academics  # noqa: F401
+from app.modules.audit import models as _audit  # noqa: F401
+from app.modules.departments import models as _departments  # noqa: F401
+from app.modules.geography import models as _geography  # noqa: F401
+from app.modules.problems import models as _problems  # noqa: F401
+from app.modules.users import models as _users  # noqa: F401
 
 config = context.config
 if config.config_file_name is not None:
@@ -49,31 +39,31 @@ config.set_main_option("sqlalchemy.url", str(get_settings().database_url))
 target_metadata = Base.metadata
 
 
-def _include_object(obj, name, type_, reflected, compare_to) -> bool:  # type: ignore[no-untyped-def]
-    """Skip PostGIS's own bookkeeping tables so autogenerate ignores them."""
-    return not (
-        type_ == "table" and name in {"spatial_ref_sys", "geography_columns", "geometry_columns"}
-    )
-
-
 def run_migrations_offline() -> None:
     context.configure(
         url=config.get_main_option("sqlalchemy.url"),
         target_metadata=target_metadata,
         literal_binds=True,
-        include_object=_include_object,
-        compare_type=True,
+        # Offline there is no database to ask which tables extensions own.
+        include_object=include_object_excluding(POSTGIS_RELATIONS),
+        compare_type=compare_type,
     )
     with context.begin_transaction():
         context.run_migrations()
 
 
 def _do_run_migrations(connection: Connection) -> None:
+    # Skip every extension's tables (PostGIS, TIGER geocoder, topology).
+    extension_tables = extension_owned_relations(connection)
+    # That SELECT auto-began a transaction. End it before configure(): Alembic
+    # treats a transaction it finds open as the caller's and never commits it,
+    # so every migration would silently roll back when the connection closed.
+    connection.commit()
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
-        include_object=_include_object,
-        compare_type=True,
+        include_object=include_object_excluding(extension_tables),
+        compare_type=compare_type,
     )
     with context.begin_transaction():
         context.run_migrations()

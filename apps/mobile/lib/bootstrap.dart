@@ -44,7 +44,9 @@ Future<void> bootstrap(Widget Function() builder) async {
       runApp(ProviderScope(child: builder()));
     },
     (error, stack) {
-      debugPrint('Uncaught error: $error\n$stack');
+      // debugPrint is not stripped from release builds; a stack trace in
+      // logcat is readable by anyone with the device on a cable.
+      if (kDebugMode) debugPrint('Uncaught error: $error\n$stack');
     },
   );
 }

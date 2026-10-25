@@ -5,13 +5,28 @@ import { useActionState, useState } from "react";
 import { Icon } from "@/components/icon";
 import { Button } from "@/components/ui";
 import { signIn, signInAsDemo, type SignInState } from "@/lib/auth/actions";
-import { DEMO_PASSWORD, DEMO_USERS } from "@/lib/auth/directory";
 import type { Role } from "@/lib/auth/roles";
 
 const EMPTY: SignInState = {};
 
 /** Label and icon per role. Order matches the sign-up funnel, not ROLES. */
-const ROLE_LABELS: Partial<Record<Role, { label: string; icon: "graduation" | "user" | "landmark" | "map-pin" | "shield" | "briefcase" | "scale" | "settings" }>> = {
+const ROLE_LABELS: Partial<
+  Record<
+    Role,
+    {
+      label: string;
+      icon:
+        | "graduation"
+        | "user"
+        | "landmark"
+        | "map-pin"
+        | "shield"
+        | "briefcase"
+        | "scale"
+        | "settings";
+    }
+  >
+> = {
   student: { label: "Student", icon: "graduation" },
   faculty: { label: "Faculty", icon: "user" },
   institute: { label: "Institute", icon: "landmark" },
@@ -35,7 +50,19 @@ function ErrorNote({ message }: { message: string }) {
   );
 }
 
-export function LoginForm({ next }: { next: string }) {
+/** Present only while demo sign-in is enabled; see lib/auth/directory.ts. */
+export interface DemoAccess {
+  password: string;
+  personas: { role: Role; name: string }[];
+}
+
+export function LoginForm({
+  next,
+  demo,
+}: {
+  next: string;
+  demo: DemoAccess | null;
+}) {
   const [state, action, pending] = useActionState(signIn, EMPTY);
   const [demoState, demoAction, demoPending] = useActionState(
     signInAsDemo,
@@ -89,62 +116,71 @@ export function LoginForm({ next }: { next: string }) {
       {/*
         Demo sign-in. Delete this block together with lib/auth/directory.ts once
         services/api issues real sessions — it is here so a reviewer can walk
-        all nine roles without nine sets of credentials.
+        all nine roles without nine sets of credentials. Not rendered at all
+        when the server has demo sign-in turned off.
       */}
-      <section className="rounded-lg border border-line bg-card-muted p-4">
-        <button
-          aria-expanded={showDemo}
-          className="flex w-full items-center gap-2 text-left text-sm font-semibold text-ink"
-          onClick={() => setShowDemo((open) => !open)}
-          type="button"
-        >
-          <Icon name={showDemo ? "chevron-down" : "chevron-right"} size={16} />
-          Continue as a demo role
-        </button>
+      {demo ? (
+        <section className="rounded-lg border border-line bg-card-muted p-4">
+          <button
+            aria-expanded={showDemo}
+            className="flex w-full items-center gap-2 text-left text-sm font-semibold text-ink"
+            onClick={() => setShowDemo((open) => !open)}
+            type="button"
+          >
+            <Icon
+              name={showDemo ? "chevron-down" : "chevron-right"}
+              size={16}
+            />
+            Continue as a demo role
+          </button>
 
-        {showDemo ? (
-          <>
-            <p className="mt-2 text-xs text-ink-muted">
-              Fixture accounts, no real authentication. Every one of them also
-              signs in above with the password{" "}
-              <code className="mono-data rounded bg-card px-1.5 py-0.5">
-                {DEMO_PASSWORD}
-              </code>
-              .
-            </p>
-            <form action={demoAction} className="mt-3 grid gap-2 sm:grid-cols-2">
-              <input name="next" type="hidden" value={next} />
-              {DEMO_USERS.map((user) => {
-                const meta = ROLE_LABELS[user.role];
-                return (
-                  <button
-                    className="flex items-center gap-2.5 rounded-[0.5rem] border border-line bg-card px-3 py-2.5 text-left text-sm font-semibold text-ink transition-colors hover:border-navy disabled:opacity-45"
-                    disabled={pending || demoPending}
-                    key={user.role}
-                    name="role"
-                    type="submit"
-                    value={user.role}
-                  >
-                    <Icon
-                      className="shrink-0 text-navy-tint"
-                      name={meta?.icon ?? "user"}
-                      size={18}
-                    />
-                    <span className="min-w-0">
-                      <span className="block truncate">
-                        {meta?.label ?? user.role}
+          {showDemo ? (
+            <>
+              <p className="mt-2 text-xs text-ink-muted">
+                Fixture accounts, no real authentication. Every one of them also
+                signs in above with the password{" "}
+                <code className="mono-data rounded bg-card px-1.5 py-0.5">
+                  {demo.password}
+                </code>
+                .
+              </p>
+              <form
+                action={demoAction}
+                className="mt-3 grid gap-2 sm:grid-cols-2"
+              >
+                <input name="next" type="hidden" value={next} />
+                {demo.personas.map((user) => {
+                  const meta = ROLE_LABELS[user.role];
+                  return (
+                    <button
+                      className="flex items-center gap-2.5 rounded-[0.5rem] border border-line bg-card px-3 py-2.5 text-left text-sm font-semibold text-ink transition-colors hover:border-navy disabled:opacity-45"
+                      disabled={pending || demoPending}
+                      key={user.role}
+                      name="role"
+                      type="submit"
+                      value={user.role}
+                    >
+                      <Icon
+                        className="shrink-0 text-navy-tint"
+                        name={meta?.icon ?? "user"}
+                        size={18}
+                      />
+                      <span className="min-w-0">
+                        <span className="block truncate">
+                          {meta?.label ?? user.role}
+                        </span>
+                        <span className="block truncate text-xs font-normal text-ink-faint">
+                          {user.name}
+                        </span>
                       </span>
-                      <span className="block truncate text-xs font-normal text-ink-faint">
-                        {user.name}
-                      </span>
-                    </span>
-                  </button>
-                );
-              })}
-            </form>
-          </>
-        ) : null}
-      </section>
+                    </button>
+                  );
+                })}
+              </form>
+            </>
+          ) : null}
+        </section>
+      ) : null}
     </div>
   );
 }

@@ -3,7 +3,9 @@
 # packages under packages/, which must be inside the context.
 #   docker build -f apps/web/Dockerfile .
 
-FROM node:25-alpine AS base
+# Node 22 LTS: Node 20 reached end of life in April 2026, and the test
+# tooling (vite 7, vitest 4) needs 22.12+. Keep in step with .nvmrc.
+FROM node:22-alpine AS base
 RUN corepack enable
 WORKDIR /repo
 

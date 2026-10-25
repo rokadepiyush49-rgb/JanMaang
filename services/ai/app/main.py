@@ -17,6 +17,7 @@ STATELESS. This service owns no domain tables and never talks to the business
 database. The API calls it and persists the result.
 """
 
+import hmac
 from collections.abc import AsyncIterator
 from contextlib import asynccontextmanager
 
@@ -52,9 +53,14 @@ CAPABILITY_ROUTERS = (
 
 
 async def verify_internal_key(x_internal_key: str = Header(default="")) -> None:
-    """This service is internal-only. The API is its sole legitimate caller."""
+    """This service is internal-only. The API is its sole legitimate caller.
+
+    Compared in constant time: `!=` returns at the first differing byte, which
+    lets a caller on the same network recover the key one character at a time.
+    """
     settings = get_settings()
-    if not settings.internal_api_key or x_internal_key != settings.internal_api_key:
+    expected = settings.internal_api_key.encode()
+    if not expected or not hmac.compare_digest(x_internal_key.encode(), expected):
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Invalid internal key")
 
 

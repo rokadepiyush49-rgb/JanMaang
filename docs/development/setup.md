@@ -17,7 +17,7 @@ than asking someone. It never overwrites an existing `.env`.
 | Tool | Why | Install |
 |---|---|---|
 | Docker | Postgres, Redis, api, ai, web | <https://docs.docker.com/get-docker/> |
-| Node 20+ | web and packages | `nvm use` (reads `.nvmrc`) |
+| Node 22.12+ | web, packages and Cloud Functions | `nvm use` (reads `.nvmrc`) |
 | pnpm 9 | TypeScript workspace | `corepack enable` |
 | uv | Python services | `curl -LsSf https://astral.sh/uv/install.sh \| sh` |
 | Flutter 3.24+ | citizen app | <https://docs.flutter.dev/get-started/install> |

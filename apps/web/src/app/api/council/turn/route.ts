@@ -13,6 +13,7 @@ import { GroqError } from "@/lib/council/groq";
 import { MissingKeyError, serverEnv } from "@/lib/council/env";
 import { advanceSession, studentMessage } from "@/lib/council/orchestrator";
 import { sessionProgress } from "@/lib/council/debate-policy";
+import { guardCouncilRequest, readJsonBody } from "@/lib/council/guard";
 import {
   parseBrief,
   parseSeatedAgentIds,
@@ -26,7 +27,10 @@ import type { ApiError, TurnResponse } from "@/lib/council/types";
 export const maxDuration = 60;
 
 export async function POST(request: Request) {
-  const body = (await request.json().catch(() => ({}))) as Record<string, unknown>;
+  const guard = await guardCouncilRequest(request, "turn");
+  if ("response" in guard) return guard.response;
+
+  const body = (await readJsonBody(request, "turn")) ?? {};
 
   let brief, seatedAgentIds, transcript, pending;
   try {
@@ -37,7 +41,10 @@ export async function POST(request: Request) {
   } catch (error) {
     return NextResponse.json<ApiError>(
       {
-        error: error instanceof ValidationError ? error.message : "Malformed request.",
+        error:
+          error instanceof ValidationError
+            ? error.message
+            : "Malformed request.",
         code: "INVALID_INPUT",
       },
       { status: 400 },
@@ -84,7 +91,11 @@ export async function POST(request: Request) {
 
     if (error instanceof MissingKeyError) {
       return NextResponse.json<ApiError>(
-        { error: "The council is not configured yet.", code: "MISSING_KEY", remedy: error.message },
+        {
+          error: "The council is not configured yet.",
+          code: "MISSING_KEY",
+          remedy: error.message,
+        },
         { status: 503 },
       );
     }
@@ -92,17 +103,20 @@ export async function POST(request: Request) {
     if (error instanceof GroqError && error.isRateLimit) {
       return NextResponse.json<ApiError>(
         {
-          error: "The council is speaking faster than the free tier allows. Wait a moment and resume.",
+          error:
+            "The council is speaking faster than the free tier allows. Wait a moment and resume.",
           code: "RATE_LIMITED",
         },
         { status: 429 },
       );
     }
 
+    // The detail goes to the server log only: upstream messages can carry
+    // provider internals the student has no use for.
     console.error("[council/turn]", error);
     return NextResponse.json<ApiError & { progress: typeof progress }>(
       {
-        error: error instanceof Error ? error.message : "The council could not respond.",
+        error: "The council could not respond. Try again in a moment.",
         code: "UPSTREAM_FAILED",
         progress,
       },
