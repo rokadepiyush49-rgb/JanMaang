@@ -18,7 +18,7 @@
     "@janmaang/config": "workspace:*",
     "@janmaang/tokens": "workspace:*",
     "@types/react": "^19.3.0",
-    "typescript": "^5.6.3",
-    "eslint": "^9.14.0"
+    "typescript": "^7.0.2",
+    "eslint": "^10.13.0"
   }
 }
