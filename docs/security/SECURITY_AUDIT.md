@@ -117,7 +117,7 @@ changed, verification could not run here (see SECURITY_TEST_PLAN.md);
 | S-21 | Medium | Mobile: app-data backup allowed; release builds log stack traces | mobile | Fixed |
 | S-22 | Medium | Sessions are stateless HMAC cookies: sign-out does not revoke a stolen cookie (valid ≤ 8 h) | web auth | Open |
 | S-23 | Medium | No login rate limit or lockout (only demo auth exists) | web auth | Open, blocked on real auth |
-| S-24 | Medium | API has no authentication, schema or endpoints; production cannot authenticate anyone | api | Open (P0 roadmap) |
+| S-24 | Medium | API has no authentication, schema or endpoints; production cannot authenticate anyone | api | Partly fixed: token verification + accounts done; web/mobile sign-in pending |
 | S-25 | Low | Demands are world-readable including `reporterId` (pseudonymous linkage), against the "anonymous citizen" promise | firestore.rules | Open, design decision |
 | S-26 | Low | Android release builds signed with the debug key | mobile | Open, manual |
 | S-27 | Low | CSP keeps `'unsafe-inline'` for scripts (no nonces) | web | Accepted trade-off |

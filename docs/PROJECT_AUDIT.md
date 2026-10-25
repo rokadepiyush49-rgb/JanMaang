@@ -19,7 +19,7 @@ the fix.
 | Component | Implemented | Missing for real use |
 |---|---|---|
 | **Web** (`apps/web`) | 9 role segments with 40+ screens on fixture data; signed-session login with demo personas; role proxy; AI Project Council calling Groq + Edge TTS; security headers; health endpoint | Real sign-in (blocked on API); every screen reads constants from `src/features/*` instead of the API; Faculty and Institute dashboards are placeholders; officer field updates do not persist |
-| **API** (`services/api`) | App factory, settings with production guards, permission matrix + `require()`, error shape, security middleware, 26 tests, CI with Postgres + Redis | **Everything domain-level:** 0 routes, 0 tables (every `models.py` is a TODO), 0 migrations, authentication stub (fails closed) |
+| **API** (`services/api`) | App factory, production guards, permission matrix + `require()`, security middleware; **initial schema** (11 tables, PostGIS, append-only hash-chained audit) and **Firebase ID-token auth** with `/auth/register`, `/auth/me`, `/auth/logout`; 50 unit tests + 12 DB integration tests | Domain endpoints (demands, verification, funding); admin role grants; pgvector for dedup |
 | **AI** (`services/ai`) | App factory, internal-key guard, provider abstraction stubs, 1 prompt, 6 eval files, 10 tests | 0 capability routes; no classification, dedup, ranking or statement generation implemented |
 | **Mobile** (`apps/mobile`) | 11 feature areas of Flutter UI, Riverpod, routing, 74 tests, mock repositories | Firebase initialisation commented out; runs on mocks only; release signing uses the debug key |
 | **Firebase** (`apps/mobile/firebase`) | Firestore + Storage rules, 4 Cloud Functions (`analyzeReport` with Gemini, `clusterDemand`, `computePriority`, `submitVerification`), emulator tests | Not deployed; App Check not configured; officer claims have no admin tool |
@@ -28,6 +28,9 @@ the fix.
 | **E2E** (`tests/e2e`) | Playwright config | 0 specs |
 
 ## Two data planes, one product
+
+**Resolved by [ADR 0006](architecture/decisions/0006-postgres-is-the-system-of-record-for-demands.md):** PostgreSQL is the system of record. The paragraph below describes the state that decision addresses.
+
 
 The README describes FastAPI + PostgreSQL as the system of record (ADR 0002).
 The code that exists for citizens writes to **Firestore** through Cloud

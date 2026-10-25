@@ -17,25 +17,29 @@ Next / Planned / Blocked. Evidence for Done items is in
 | D-5 | Deployment scaffolding: health checks, smoke tests, Kustomize, Dependabot | `kubectl kustomize`, `bash -n` |
 | D-6 | Firebase rules and input tests run in CI against the emulators (was P0-4) | `ci-firebase.yml`: 42/42 at `e315a89` |
 | D-7 | Repo moved to Node 22 LTS (Node 20 end-of-life; vite 7 and firebase-admin 14 need it) | all PR #3 checks green |
+| D-8 | ADR 0006: PostgreSQL is the system of record; roles live in the database (was P0-2) | decision recorded |
+| D-9 | Initial schema: geography, departments, institutes, users, demands, supporters, clusters, verifications, hash-chained append-only audit (P0-3) | migration renders offline; schema-drift, round-trip and trigger tests run in `ci-api` |
+| D-10 | API authentication: Firebase ID-token verification with revocation, DB-backed principal, `POST /auth/register` (citizen only), `GET /auth/me`, `POST /auth/logout` (P0-1, API side) | 24 unit tests; 10 DB integration tests in `ci-api` |
 
 ## P0 — before any production deploy
 
-### P0-1 · API authentication — **Next**
+### P0-1 · API authentication — **In progress** (API side done; clients next)
 *Problem:* `get_current_principal` refuses every token; production has no way to sign anyone in once demo sign-in is off.
 *Evidence:* `services/api/app/core/security.py`; `users/models.py` is a TODO.
 *Solution:* verify Firebase ID tokens with `firebase_admin.auth.verify_id_token` (checks signature, audience, expiry, revocation with `check_revoked=True`); resolve to a `users` row (uid → user id, role, district/department/institute scope); web signs in via Firebase Auth client SDK and exchanges the ID token for its session cookie; delete `lib/auth/directory.ts` and `DEMO_AUTH`.
 *Files:* `services/api/app/core/security.py`, `modules/auth/*`, `modules/users/models.py`, first Alembic migration, `apps/web/src/lib/auth/*`.
 *Depends on:* P0-2 (where the user record lives).
 *Acceptance:* forged, expired, revoked and wrong-project tokens → 401; a valid token for an unknown uid → 403; a valid token resolves the right role and scope; sign-out revokes refresh tokens.
+*Status:* API side done (D-10). **Remaining:** the web app signs in with the Firebase JS SDK, posts the ID token to a server action that calls `/auth/me` and sets its session cookie from the returned role — then `lib/auth/directory.ts` and `DEMO_AUTH` are deleted. The mobile app calls `/auth/register` after phone OTP. An admin endpoint to grant non-citizen roles (audited) is P1.
 *Tests:* unit tests with a stubbed verifier for each rejection; integration test against Postgres in `ci-api`.
 
-### P0-2 · Choose the system of record for demands — **Blocked on a decision**
+### P0-2 · Choose the system of record for demands — **Done**: PostgreSQL ([ADR 0006](architecture/decisions/0006-postgres-is-the-system-of-record-for-demands.md))
 *Problem:* mobile writes demands to Firestore; ADR 0002 and the API design say PostgreSQL; the web reads neither.
 *Options:* (a) PostgreSQL is the source of truth, the mobile app calls the API, Firestore is dropped or kept for push only; (b) Firestore stays the citizen-facing store and a Function mirrors into PostgreSQL for ranking, funding and dashboards.
 *Recommendation:* (a) — it is what ADR 0002 records, keeps one authorisation model (`require(Permission)` + scope), and the PostGIS/pgvector dedup cascade only works in Postgres.
 *Acceptance:* an ADR recording the choice; the mobile repository interface points at one backend.
 
-### P0-3 · Initial schema and migrations — **Planned**
+### P0-3 · Initial schema and migrations — **Done** (CI verification pending)
 Users, roles/scopes, demands, clusters, verifications, works, allocations, audit events (hash-chained). *Acceptance:* `alembic upgrade head` on an empty database in CI; downgrade of the last revision works; every table has an owner-scoped index for the queries P1 needs.
 
 ### P0-4 · Run the Firebase rules tests in CI — **Done** (D-6)

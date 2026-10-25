@@ -113,8 +113,10 @@ def test_protected_route_rejects_anonymous_callers() -> None:
     assert response.headers["www-authenticate"] == "Bearer"
 
 
-def test_protected_route_fails_closed_until_auth_is_built() -> None:
+def test_protected_route_fails_closed_without_an_auth_seam() -> None:
+    """A deployment that lost its verifier must refuse, never wave requests through."""
     client = _app_with(require(Permission.AUDIT_READ))
+    del client.app.state.token_verifier  # type: ignore[attr-defined]
     response = client.get(
         "/api/v1/_probe/protected", headers={"authorization": "Bearer forged.token.value"}
     )
@@ -137,6 +139,7 @@ def _settings(**overrides: object) -> Settings:
         "auth_secret": GOOD_SECRET,
         "ai_service_key": GOOD_SECRET[::-1],
         "cors_origins": ["https://janmaang.in"],
+        "firebase_project_id": "janmaang-prod",
         "environment": "production",
     }
     base.update(overrides)
@@ -158,6 +161,8 @@ def test_production_settings_accept_a_safe_configuration() -> None:
         {"debug": True},
         {"cors_origins": ["http://janmaang.in"]},
         {"environment": "staging", "auth_secret": "dev-only-not-a-real-secret-change-me"},
+        {"firebase_project_id": ""},
+        {"firebase_check_revoked": False},
     ],
 )
 def test_deployed_settings_refuse_unsafe_values(overrides: dict[str, object]) -> None:
