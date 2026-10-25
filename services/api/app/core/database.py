@@ -7,6 +7,7 @@ is owned entirely by Alembic so a fresh clone and production converge.
 from collections.abc import AsyncGenerator
 from typing import Any, Final
 
+from geoalchemy2.types import Geography, Geometry
 from sqlalchemy import MetaData
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 from sqlalchemy.orm import DeclarativeBase
@@ -23,6 +24,25 @@ NAMING_CONVENTION: Final[dict[str, str]] = {
     "fk": "fk_%(table_name)s_%(column_0_name)s_%(referred_table_name)s",
     "pk": "pk_%(table_name)s",
 }
+
+
+def compare_type(
+    _context: Any,
+    _inspected_column: Any,
+    _metadata_column: Any,
+    _inspected_type: Any,
+    metadata_type: Any,
+) -> bool | None:
+    """Alembic type comparison that leaves PostGIS columns alone.
+
+    Reflected geography and geometry types differ from the declared ones in
+    cosmetic parameters (dimension, spatial_index), so default comparison would
+    report a change on every run. Returning None defers to Alembic for every
+    other type. Used by env.py and by the schema-drift test.
+    """
+    if isinstance(metadata_type, Geography | Geometry):
+        return False
+    return None
 
 
 class Base(DeclarativeBase):
