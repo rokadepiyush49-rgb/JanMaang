@@ -75,20 +75,24 @@ async def test_resolver_returns_role_and_scope_from_the_database(db: AsyncSessio
     db.add(panchayat)
     await db.flush()
 
+    # Read the ids now: after expire_all() a plain attribute access would try
+    # to lazy-load outside the async context (MissingGreenlet).
+    district_id, panchayat_id = district.id, panchayat.id
+
     token = _token()
     account, _ = await users.register_citizen(db, token)
     await db.execute(
         update(User)
         .where(User.id == account.id)
-        .values(role=Role.PANCHAYAT, district_id=district.id, gram_panchayat_id=panchayat.id)
+        .values(role=Role.PANCHAYAT, district_id=district_id, gram_panchayat_id=panchayat_id)
     )
     db.expire_all()
 
     principal = await users.resolve_principal(db, token)
     assert principal is not None
     assert principal.role is Role.PANCHAYAT
-    assert principal.gram_panchayat_id == panchayat.id
-    assert principal.district_id == district.id
+    assert principal.gram_panchayat_id == panchayat_id
+    assert principal.district_id == district_id
 
 
 async def test_deactivated_accounts_are_locked_out(db: AsyncSession) -> None:

@@ -13,7 +13,13 @@ from sqlalchemy.engine import Connection
 from sqlalchemy.ext.asyncio import async_engine_from_config
 
 from app.core.config import get_settings
-from app.core.database import Base, compare_type
+from app.core.database import (
+    POSTGIS_RELATIONS,
+    Base,
+    compare_type,
+    extension_owned_relations,
+    include_object_excluding,
+)
 
 # Importing every module's models registers them on Base.metadata so
 # --autogenerate sees the full schema. Importing the package alone is not
@@ -33,19 +39,13 @@ config.set_main_option("sqlalchemy.url", str(get_settings().database_url))
 target_metadata = Base.metadata
 
 
-def _include_object(obj, name, type_, reflected, compare_to) -> bool:  # type: ignore[no-untyped-def]
-    """Skip PostGIS's own bookkeeping tables so autogenerate ignores them."""
-    return not (
-        type_ == "table" and name in {"spatial_ref_sys", "geography_columns", "geometry_columns"}
-    )
-
-
 def run_migrations_offline() -> None:
     context.configure(
         url=config.get_main_option("sqlalchemy.url"),
         target_metadata=target_metadata,
         literal_binds=True,
-        include_object=_include_object,
+        # Offline there is no database to ask which tables extensions own.
+        include_object=include_object_excluding(POSTGIS_RELATIONS),
         compare_type=compare_type,
     )
     with context.begin_transaction():
@@ -53,10 +53,16 @@ def run_migrations_offline() -> None:
 
 
 def _do_run_migrations(connection: Connection) -> None:
+    # Skip every extension's tables (PostGIS, TIGER geocoder, topology).
+    extension_tables = extension_owned_relations(connection)
+    # That SELECT auto-began a transaction. End it before configure(): Alembic
+    # treats a transaction it finds open as the caller's and never commits it,
+    # so every migration would silently roll back when the connection closed.
+    connection.commit()
     context.configure(
         connection=connection,
         target_metadata=target_metadata,
-        include_object=_include_object,
+        include_object=include_object_excluding(extension_tables),
         compare_type=compare_type,
     )
     with context.begin_transaction():

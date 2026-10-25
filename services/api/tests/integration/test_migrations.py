@@ -18,7 +18,12 @@ from sqlalchemy.ext.asyncio import create_async_engine
 from sqlalchemy.pool import NullPool
 
 # Same registrations as app/migrations/env.py, without running env.py.
-from app.core.database import Base, compare_type
+from app.core.database import (
+    Base,
+    compare_type,
+    extension_owned_relations,
+    include_object_excluding,
+)
 from app.modules.academics import models as _academics  # noqa: F401
 from app.modules.audit import models as _audit  # noqa: F401
 from app.modules.departments import models as _departments  # noqa: F401
@@ -31,17 +36,12 @@ from .conftest import database_url, require_database_sync
 pytestmark = pytest.mark.integration
 
 API_ROOT = Path(__file__).resolve().parents[2]
-_POSTGIS_TABLES = {"spatial_ref_sys", "geography_columns", "geometry_columns"}
 
 
 def _alembic_config() -> Config:
     config = Config(str(API_ROOT / "alembic.ini"))
     config.set_main_option("script_location", str(API_ROOT / "app" / "migrations"))
     return config
-
-
-def _include(_obj: object, name: str | None, type_: str, *_: object) -> bool:
-    return not (type_ == "table" and name in _POSTGIS_TABLES)
 
 
 def _schema_diff() -> list[Any]:
@@ -52,7 +52,13 @@ def _schema_diff() -> list[Any]:
 
                 def compare(sync_conn: Any) -> list[Any]:
                     context = MigrationContext.configure(
-                        sync_conn, opts={"compare_type": compare_type, "include_object": _include}
+                        sync_conn,
+                        opts={
+                            "compare_type": compare_type,
+                            "include_object": include_object_excluding(
+                                extension_owned_relations(sync_conn)
+                            ),
+                        },
                     )
                     return list(compare_metadata(context, Base.metadata))
 
