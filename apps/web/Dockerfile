@@ -3,7 +3,7 @@
 # packages under packages/, which must be inside the context.
 #   docker build -f apps/web/Dockerfile .
 
-FROM node:25-alpine AS base
+FROM node:26-alpine AS base
 RUN corepack enable
 WORKDIR /repo
 
