@@ -5,7 +5,7 @@
 # `CREATE EXTENSION vector` aborted the entrypoint and the container never
 # became healthy — which took every service that depends_on it down with it.
 # pgvector comes from the same PGDG repo the base image already configures.
-FROM postgis/postgis:17-3.5
+FROM postgis/postgis:18-3.6
 
 RUN apt-get update \
     && apt-get install -y --no-install-recommends postgresql-16-pgvector \
